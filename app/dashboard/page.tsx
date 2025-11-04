@@ -15,6 +15,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const { presentation, setPresentation } = useEditorStore()
+  const isRightPanelOpen = useEditorStore(state => state.isRightPanelOpen)
   const supabase = createClient()
   
   useEffect(() => {
@@ -84,8 +85,6 @@ export default function DashboardPage() {
       </div>
     )
   }
-  
-  const isRightPanelOpen = useEditorStore(state => state.isRightPanelOpen)
 
   return (
     <ThemeProvider>

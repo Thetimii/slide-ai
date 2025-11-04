@@ -117,33 +117,17 @@ export interface SlidesJSON {
 // ============ AI RESPONSE SCHEMA ============
 
 // Schema returned by OpenRouter AI
-export const DecorationSchema = z.object({
-  type: z.enum(['circle', 'rect', 'line']),
-  color: z.string(),
-  position: z.object({
-    x: z.number(),
-    y: z.number(),
-  }),
-  size: z.object({
-    width: z.number(),
-    height: z.number(),
-  }),
-  rotation: z.number().optional().default(0),
-  opacity: z.number().min(0).max(1).optional().default(1),
-})
-
 export const AISlideSchema = z.object({
   title: z.string().min(1),
   content: z.string().min(1),
   theme: z.string().min(1),
-  decorations: z.array(DecorationSchema).optional().default([]),
+  layout: z.enum(['hero', 'split', 'minimal', 'quote', 'focus']).optional().default('hero'),
 })
 
 export const AISlidesResponseSchema = z.object({
   slides: z.array(AISlideSchema),
 })
 
-export type Decoration = z.infer<typeof DecorationSchema>
 export type AISlide = z.infer<typeof AISlideSchema>
 export type AISlidesResponse = z.infer<typeof AISlidesResponseSchema>
 
@@ -261,6 +245,81 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       fill: '#F2F3F5',
       align: 'center',
       lineHeight: 1.5,
+    },
+  },
+  'dark-elegant': {
+    name: 'Dark Elegant',
+    background: {
+      type: 'solid',
+      solid: {
+        color: '#0A0A0A',
+      },
+    },
+    titleStyle: {
+      fontFamily: 'DM Sans',
+      fontSize: 75,
+      fontWeight: 700,
+      fill: '#FFFFFF',
+      align: 'center',
+      letterSpacing: -1,
+    },
+    bodyStyle: {
+      fontFamily: 'Inter',
+      fontSize: 36,
+      fontWeight: 300,
+      fill: '#A0A0A0',
+      align: 'center',
+      lineHeight: 1.7,
+    },
+  },
+  'ocean-depth': {
+    name: 'Ocean Depth',
+    background: {
+      type: 'gradient',
+      gradient: {
+        angle: 180,
+        colors: ['#0C2340', '#16425B', '#1A5F7A'],
+      },
+    },
+    titleStyle: {
+      fontFamily: 'DM Sans',
+      fontSize: 72,
+      fontWeight: 700,
+      fill: '#FFFFFF',
+      align: 'center',
+    },
+    bodyStyle: {
+      fontFamily: 'Inter',
+      fontSize: 36,
+      fontWeight: 400,
+      fill: '#E0F4FF',
+      align: 'center',
+      lineHeight: 1.5,
+    },
+  },
+  'sunset-glow': {
+    name: 'Sunset Glow',
+    background: {
+      type: 'gradient',
+      gradient: {
+        angle: 45,
+        colors: ['#1A1A2E', '#3E2C41', '#4A1C40'],
+      },
+    },
+    titleStyle: {
+      fontFamily: 'DM Sans',
+      fontSize: 70,
+      fontWeight: 700,
+      fill: '#FFB6C1',
+      align: 'center',
+    },
+    bodyStyle: {
+      fontFamily: 'Inter',
+      fontSize: 34,
+      fontWeight: 400,
+      fill: '#FFC8D3',
+      align: 'center',
+      lineHeight: 1.6,
     },
   },
 }

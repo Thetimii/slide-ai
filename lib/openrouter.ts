@@ -13,40 +13,61 @@ export async function callOpenRouter(request: OpenRouterRequest) {
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
   
-  const systemPrompt = `You convert sermon/worship notes into visually engaging slides with creative layouts. ALWAYS return valid JSON matching this schema: {"slides":[{"title":string,"content":string,"theme":string,"decorations":[{"type":"circle"|"rect"|"line","color":string,"position":{"x":number,"y":number},"size":{"width":number,"height":number},"rotation":number,"opacity":number}]}]}. 
+  const systemPrompt = `You are a professional presentation designer creating stunning church slides. Return valid JSON matching this schema: 
+{"slides":[{"title":string,"content":string,"theme":string,"layout":"hero"|"split"|"minimal"|"quote"|"focus"}]}
 
-Guidelines for content:
-- Keep titles short and punchy (5-8 words max)
-- Content should be <= 40 words, clear and concise
-- Break content into logical slides
-- Each slide should be self-contained
-- Prefer bullet points or short phrases over paragraphs
+CRITICAL DESIGN RULES:
+1. Choose appropriate layouts for content:
+   - "hero": Bold statements, main titles (large centered text)
+   - "split": Two-part messages, comparisons
+   - "minimal": Scripture verses, quotes (lots of white space)
+   - "quote": Memorable phrases, key takeaways
+   - "focus": Single word/phrase emphasis
 
-Guidelines for visual design:
-- Use theme names: "modern-blue", "minimal-light", or "warm-gradient"
-- Add 2-5 decorative elements per slide for visual interest
-- Decorations should include: circles, rectangles, lines, dots
-- Position decorations strategically (corners, edges, behind text)
-- Use subtle colors that complement the theme (pastels, soft gradients)
-- Vary sizes: small accents (20-50px) and larger background shapes (100-300px)
-- Apply 0-45 degree rotations for dynamic feel
-- Use 0.1-0.3 opacity for background elements, 0.5-0.8 for accents
-- Create visual hierarchy with shapes (e.g., circles behind titles, lines as dividers)
-- Distribute decorations asymmetrically for modern aesthetic
+2. Content Guidelines:
+   - Titles: 3-6 words maximum (punchy, memorable)
+   - Body: 15-30 words max (never full sentences)
+   - Use line breaks (\n) strategically for rhythm
+   - Scripture references: "John 3:16" format
+   - Key phrases in ALL CAPS for emphasis
 
-Example decoration positions:
-- Top-right corner: {"x": 1400, "y": 100, "width": 200, "height": 200}
-- Bottom-left: {"x": 100, "y": 700, "width": 150, "height": 150}
-- Behind title: {"x": 100, "y": 150, "width": 300, "height": 80}
-- Side accent: {"x": 1500, "y": 400, "width": 50, "height": 300}
+3. Theme Selection:
+   - "modern-blue": Contemporary worship, youth events
+   - "minimal-light": Scripture, reflective moments  
+   - "warm-gradient": Comfort, community, welcome messages
+   - "dark-elegant": Sophisticated, memorial services
+   - "ocean-depth": Baptism, renewal themes
+   - "sunset-glow": Hope, new beginnings
 
-Example color schemes by theme:
-- modern-blue: "#89C2FF", "#A8D5FF", "#C4E4FF" (light blues)
-- minimal-light: "#E0E0E0", "#F5F5F5", "#CCCCCC" (soft grays)
-- warm-gradient: "#F5C26B", "#FFD88A", "#FFE6B3" (warm golds)
+4. Professional Patterns:
+   - Start with impactful hero slide
+   - Alternate layouts for visual interest
+   - End with memorable quote/call-to-action
+   - Never repeat same layout 3x in a row
 
-Be creative! Mix circles, rectangles, and lines. Use rotation. Layer with opacity. Create depth and interest.
-`
+EXAMPLE OUTPUT:
+{
+  "slides": [
+    {
+      "title": "Faith Over Fear",
+      "content": "When doubt creeps in\nGod's promises remain",
+      "theme": "modern-blue",
+      "layout": "hero"
+    },
+    {
+      "title": "What Does Faith Look Like?",
+      "content": "TRUST in the unseen\nSTEP when it's uncomfortable\nBELIEVE before you see results",
+      "theme": "modern-blue",
+      "layout": "split"
+    },
+    {
+      "title": "John 3:16",
+      "content": "For God so loved the world that he gave his one and only Son",
+      "theme": "minimal-light",
+      "layout": "quote"
+    }
+  ]
+}`
 
   const userPrompt = `TITLE: ${request.title}
 STYLE: ${request.style}

@@ -1,12 +1,19 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useEditorStore } from '@/lib/store'
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const isDarkMode = useEditorStore(state => state.isDarkMode)
+  const [mounted, setMounted] = useState(false)
+  const isDarkMode = useEditorStore(state => mounted ? state.isDarkMode : true)
   
   useEffect(() => {
+    setMounted(true)
+  }, [])
+  
+  useEffect(() => {
+    if (!mounted) return
+    
     const root = document.documentElement
     if (isDarkMode) {
       root.classList.add('dark')
@@ -15,7 +22,11 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
       root.classList.add('light')
       root.classList.remove('dark')
     }
-  }, [isDarkMode])
+  }, [isDarkMode, mounted])
+  
+  if (!mounted) {
+    return <>{children}</>
+  }
   
   return <>{children}</>
 }

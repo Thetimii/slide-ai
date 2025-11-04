@@ -15,7 +15,7 @@ export default function SlidesList() {
   
   if (!presentation) {
     return (
-      <div className="p-4 text-center text-muted text-sm">
+      <div className="p-4 text-center text-gray-500 dark:text-muted text-sm">
         No slides yet
       </div>
     )
@@ -54,7 +54,7 @@ export default function SlidesList() {
   return (
     <div className="p-4 space-y-3">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-heading font-semibold">Slides</h3>
+        <h3 className="font-heading font-semibold text-gray-900 dark:text-white">Slides</h3>
         <button 
           onClick={handleAddSlide}
           className="text-primary hover:text-primary/80 text-xl"
@@ -73,11 +73,11 @@ export default function SlidesList() {
               group relative rounded-xl overflow-hidden cursor-pointer transition-all
               ${index === currentSlideIndex 
                 ? 'ring-2 ring-primary shadow-lg' 
-                : 'hover:ring-2 hover:ring-white/20'
+                : 'hover:ring-2 hover:ring-gray-300 dark:hover:ring-white/20'
               }
             `}
           >
-            <div className="aspect-video bg-surface-2 flex items-center justify-center p-4">
+            <div className="aspect-video bg-gray-200 dark:bg-surface-2 flex items-center justify-center p-4">
               <div className="text-center">
                 <p className="text-xs font-medium truncate">
                   {slide.meta.title || `Slide ${index + 1}`}

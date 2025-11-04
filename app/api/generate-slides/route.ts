@@ -4,11 +4,19 @@ import { callOpenRouter } from '@/lib/openrouter'
 import { transformAISlidesToJSON } from '@/lib/ai-transform'
 import { z } from 'zod'
 
+const SlideInputSchema = z.object({
+  id: z.string(),
+  content: z.string().min(1),
+})
+
 const GenerateSlidesRequestSchema = z.object({
-  title: z.string().min(1).max(100),
-  style: z.string().min(1).max(200),
-  notes: z.string().min(10).max(5000),
   presentationTitle: z.string().min(1).max(200),
+  theme: z.string().min(1).max(100),
+  style: z.string().min(1).max(200),
+  numSlides: z.number().int().min(1).max(20),
+  slides: z.array(SlideInputSchema),
+  useUniformDesign: z.boolean(),
+  useVerbatim: z.boolean(),
 })
 
 export async function POST(request: NextRequest) {
@@ -33,9 +41,11 @@ export async function POST(request: NextRequest) {
     let aiResponse
     try {
       aiResponse = await callOpenRouter({
-        title: validatedData.title,
+        theme: validatedData.theme,
         style: validatedData.style,
-        notes: validatedData.notes,
+        slides: validatedData.slides,
+        useUniformDesign: validatedData.useUniformDesign,
+        useVerbatim: validatedData.useVerbatim,
       })
     } catch (aiError) {
       console.error('AI generation failed:', aiError)
@@ -43,9 +53,11 @@ export async function POST(request: NextRequest) {
       // Retry once
       try {
         aiResponse = await callOpenRouter({
-          title: validatedData.title,
+          theme: validatedData.theme,
           style: validatedData.style,
-          notes: validatedData.notes,
+          slides: validatedData.slides,
+          useUniformDesign: validatedData.useUniformDesign,
+          useVerbatim: validatedData.useVerbatim,
         })
       } catch (retryError) {
         console.error('AI retry failed:', retryError)
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Transform AI slides to renderable format
-    const slidesJSON = transformAISlidesToJSON(aiResponse.slides)
+    const slidesJSON = transformAISlidesToJSON(aiResponse)
     
     // Save to database
     const { data: presentation, error: dbError } = await supabase
@@ -81,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Save to prompts history
     await supabase.from('prompts_history').insert({
       user_id: user.id,
-      input_text: validatedData.notes,
+      input_text: JSON.stringify(validatedData.slides),
       ai_response: aiResponse,
     })
     

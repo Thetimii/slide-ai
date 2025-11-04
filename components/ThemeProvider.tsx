@@ -16,17 +16,18 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     
     const root = document.documentElement
     if (isDarkMode) {
-      root.classList.add('dark')
       root.classList.remove('light')
+      root.classList.add('dark')
     } else {
-      root.classList.add('light')
       root.classList.remove('dark')
+      root.classList.add('light')
     }
   }, [isDarkMode, mounted])
   
   if (!mounted) {
-    return <>{children}</>
+    // Return with default dark theme during SSR
+    return <div className="dark">{children}</div>
   }
   
-  return <>{children}</>
+  return <div className={isDarkMode ? 'dark' : 'light'}>{children}</div>
 }

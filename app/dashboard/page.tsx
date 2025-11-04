@@ -88,9 +88,9 @@ export default function DashboardPage() {
 
   return (
     <ThemeProvider>
-      <div className="flex h-screen bg-gray-900 light:bg-gray-50">
+      <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
         {/* Left Sidebar - Slides List */}
-        <div className="w-64 border-r border-gray-700 light:border-gray-200">
+        <div className="w-64 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <SlidesList />
         </div>
 
@@ -102,7 +102,7 @@ export default function DashboardPage() {
 
         {/* Right Inspector Panel */}
         <div 
-          className={`border-l border-gray-700 light:border-gray-200 transition-all duration-300 ease-in-out ${
+          className={`border-l border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 transition-all duration-300 ease-in-out ${
             isRightPanelOpen ? 'w-80' : 'w-0 overflow-hidden'
           }`}
         >

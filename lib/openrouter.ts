@@ -1,10 +1,76 @@
-import { AISlidesResponseSchema } from './types'
+import { z } from 'zod'
+
+export interface SlideInput {
+  id: string
+  content: string
+}
 
 export interface OpenRouterRequest {
-  title: string
+  theme: string
   style: string
-  notes: string
+  slides: SlideInput[]
+  useUniformDesign: boolean
+  useVerbatim: boolean
 }
+
+// Cinematic slide element schema
+const ElementSchema = z.object({
+  type: z.enum(['text', 'shape', 'gradient', 'image']),
+  x: z.number(),
+  y: z.number(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  content: z.string().optional(),
+  fontSize: z.number().optional(),
+  fontFamily: z.string().optional(),
+  fontWeight: z.string().optional(),
+  color: z.string().optional(),
+  opacity: z.number().optional(),
+  rotation: z.number().optional(),
+  blur: z.number().optional(),
+  shadow: z.object({
+    x: z.number(),
+    y: z.number(),
+    blur: z.number(),
+    color: z.string(),
+  }).optional(),
+  gradient: z.object({
+    type: z.enum(['linear', 'radial']),
+    colors: z.array(z.string()),
+    angle: z.number().optional(),
+  }).optional(),
+  animation: z.object({
+    type: z.enum(['fadeIn', 'slideIn', 'scale', 'none']),
+    duration: z.number(),
+    delay: z.number(),
+  }).optional(),
+  texture: z.string().optional(),
+  parallaxDepth: z.number().optional(),
+})
+
+const CinematicSlideSchema = z.object({
+  id: z.string(),
+  title: z.string().optional(),
+  mood: z.string(),
+  composition: z.string(),
+  background: z.object({
+    type: z.enum(['solid', 'gradient', 'image']),
+    colors: z.array(z.string()).optional(),
+    gradientAngle: z.number().optional(),
+    imageUrl: z.string().optional(),
+    blur: z.number().optional(),
+  }),
+  elements: z.array(ElementSchema),
+})
+
+const CinematicResponseSchema = z.object({
+  meta: z.object({
+    theme: z.string(),
+    totalSlides: z.number(),
+    uniformDesign: z.boolean(),
+  }),
+  slides: z.array(CinematicSlideSchema),
+})
 
 export async function callOpenRouter(request: OpenRouterRequest) {
   const apiKey = process.env.OPENROUTER_API_KEY
@@ -13,68 +79,108 @@ export async function callOpenRouter(request: OpenRouterRequest) {
     throw new Error('OPENROUTER_API_KEY is not configured')
   }
   
-  const systemPrompt = `You are a professional presentation designer creating stunning church slides. Return valid JSON matching this schema: 
-{"slides":[{"title":string,"content":string,"theme":string,"layout":"hero"|"split"|"minimal"|"quote"|"focus"}]}
+  const systemPrompt = `You are a professional visual designer specializing in cinematic presentation design. 
+Generate a JSON following the schema below. Each slide must look like it was designed by a real designer — soft gradients, good typography rhythm, spacing, motion, texture, and color harmony. 
+Do not make anything childish or PowerPoint-like.
 
-CRITICAL DESIGN RULES:
-1. Choose appropriate layouts for content:
-   - "hero": Bold statements, main titles (large centered text)
-   - "split": Two-part messages, comparisons
-   - "minimal": Scripture verses, quotes (lots of white space)
-   - "quote": Memorable phrases, key takeaways
-   - "focus": Single word/phrase emphasis
-
-2. Content Guidelines:
-   - Titles: 3-6 words maximum (punchy, memorable)
-   - Body: 15-30 words max (never full sentences)
-   - Use line breaks (\n) strategically for rhythm
-   - Scripture references: "John 3:16" format
-   - Key phrases in ALL CAPS for emphasis
-
-3. Theme Selection:
-   - "modern-blue": Contemporary worship, youth events
-   - "minimal-light": Scripture, reflective moments  
-   - "warm-gradient": Comfort, community, welcome messages
-   - "dark-elegant": Sophisticated, memorial services
-   - "ocean-depth": Baptism, renewal themes
-   - "sunset-glow": Hope, new beginnings
-
-4. Professional Patterns:
-   - Start with impactful hero slide
-   - Alternate layouts for visual interest
-   - End with memorable quote/call-to-action
-   - Never repeat same layout 3x in a row
-
-EXAMPLE OUTPUT:
+REQUIRED JSON SCHEMA:
 {
+  "meta": {
+    "theme": string,
+    "totalSlides": number,
+    "uniformDesign": boolean
+  },
   "slides": [
     {
-      "title": "Faith Over Fear",
-      "content": "When doubt creeps in\nGod's promises remain",
-      "theme": "modern-blue",
-      "layout": "hero"
-    },
-    {
-      "title": "What Does Faith Look Like?",
-      "content": "TRUST in the unseen\nSTEP when it's uncomfortable\nBELIEVE before you see results",
-      "theme": "modern-blue",
-      "layout": "split"
-    },
-    {
-      "title": "John 3:16",
-      "content": "For God so loved the world that he gave his one and only Son",
-      "theme": "minimal-light",
-      "layout": "quote"
+      "id": string,
+      "title": string (optional),
+      "mood": string (e.g., "calm", "energetic", "reverent", "bold"),
+      "composition": string (e.g., "centered", "asymmetric", "split", "layered"),
+      "background": {
+        "type": "solid" | "gradient" | "image",
+        "colors": [string, string?],
+        "gradientAngle": number (0-360),
+        "blur": number (0-20)
+      },
+      "elements": [
+        {
+          "type": "text" | "shape" | "gradient",
+          "x": number (0-1600),
+          "y": number (0-900),
+          "width": number,
+          "height": number,
+          "content": string (for text),
+          "fontSize": number (16-180),
+          "fontFamily": "'Inter', 'Playfair Display', 'Montserrat', 'Crimson Pro'",
+          "fontWeight": "300" | "400" | "600" | "700" | "900",
+          "color": string (hex),
+          "opacity": number (0-1),
+          "rotation": number (-45 to 45),
+          "blur": number (0-15),
+          "shadow": {
+            "x": number,
+            "y": number,
+            "blur": number,
+            "color": string
+          },
+          "gradient": {
+            "type": "linear" | "radial",
+            "colors": [string, string],
+            "angle": number
+          },
+          "animation": {
+            "type": "fadeIn" | "slideIn" | "scale" | "none",
+            "duration": number (0.3-2),
+            "delay": number (0-1)
+          },
+          "texture": "grain" | "noise" | "none",
+          "parallaxDepth": number (0-5)
+        }
+      ]
     }
   ]
-}`
+}
 
-  const userPrompt = `TITLE: ${request.title}
+DESIGN PRINCIPLES:
+1. Typography Hierarchy: Use font sizes from 16px (captions) to 180px (hero titles)
+2. Spacing & Rhythm: Elements should breathe, use rule of thirds
+3. Color Harmony: Stick to 2-3 main colors, use opacity for depth
+4. Motion: Subtle animations (fadeIn, slideIn), stagger delays
+5. Texture: Add grain/noise overlays at 0.05-0.15 opacity for warmth
+6. Shadows: Soft, realistic shadows (10-40px blur)
+7. Gradients: Smooth, multi-stop gradients (not harsh)
+8. Composition: Asymmetric layouts are more professional than centered
+
+THEME INTERPRETATIONS:
+- "Modern Cinematic": Deep blues/purples, large sans-serif, dramatic shadows
+- "Minimal Elegant": Whites/grays, serif fonts, lots of negative space
+- "Bold Typography": Huge text (120-180px), high contrast, geometric shapes
+- "Soft Gradients": Pastel gradients, rounded shapes, gentle animations
+- "Dark Moody": Dark backgrounds (#0a0a0a-#1a1a1a), gold/white accents
+- "Light Airy": Light backgrounds (#f5f5f5-#ffffff), subtle colors
+
+IMPORTANT:
+- Canvas is 1600×900px
+- If useUniformDesign=true, use same composition/colors across all slides
+- If useVerbatim=true, use exact user text without rewriting
+- Each slide should have 3-8 elements (text + decorative shapes)
+- Always include subtle background gradients or textures
+- Use font weights strategically: 300 for elegance, 700-900 for impact`
+
+  const slidesDescription = request.slides
+    .map((s, i) => `Slide ${i + 1}: ${s.content}`)
+    .join('\n\n')
+
+  const userPrompt = `THEME: ${request.theme}
 STYLE: ${request.style}
-NOTES:
-${request.notes}
+UNIFORM DESIGN: ${request.useUniformDesign ? 'Yes - maintain consistent design language' : 'No - vary designs'}
+USE VERBATIM TEXT: ${request.useVerbatim ? 'Yes - use exact text provided' : 'No - you can refine text'}
+NUMBER OF SLIDES: ${request.slides.length}
 
-Return JSON only.`
+SLIDE CONTENT:
+${slidesDescription}
+
+Generate ${request.slides.length} cinematic slides. Return ONLY valid JSON matching the schema above.`
 
   try {
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -84,7 +190,7 @@ Return JSON only.`
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'openai/gpt-oss-20b:free',
+        model: 'openai/gpt-4o-mini',
         response_format: { type: 'json_object' },
         messages: [
           {
@@ -96,8 +202,9 @@ Return JSON only.`
             content: userPrompt,
           },
         ],
-        temperature: 0.2,
-        top_p: 0.9,
+        temperature: 0.7,
+        top_p: 0.95,
+        max_tokens: 4000,
       }),
     })
     
@@ -124,7 +231,7 @@ Return JSON only.`
     }
     
     // Validate with Zod
-    const validated = AISlidesResponseSchema.parse(parsedContent)
+    const validated = CinematicResponseSchema.parse(parsedContent)
     
     return validated
   } catch (error) {

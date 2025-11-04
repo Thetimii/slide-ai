@@ -171,28 +171,33 @@ export default function EditorCanvas() {
   }
   
   return (
-    <div className="inline-block shadow-2xl rounded-2xl overflow-hidden">
-      <Stage
-        ref={stageRef}
-        width={CANVAS_WIDTH * zoom}
-        height={CANVAS_HEIGHT * zoom}
-        scaleX={zoom}
-        scaleY={zoom}
-        onClick={(e: any) => {
-          // Deselect if clicking stage background
-          if (e.target === e.target.getStage()) {
-            setSelectedElementId(null)
-          }
-        }}
-      >
-        <Layer>
-          {renderBackground()}
-          {/* Sort elements by zIndex before rendering */}
-          {[...currentSlide.elements]
-            .sort((a, b) => (a.props.zIndex || 0) - (b.props.zIndex || 0))
-            .map((element, index) => renderElement(element, index))}
-        </Layer>
-      </Stage>
+    <div className="flex items-center justify-center w-full h-full bg-gray-100 dark:bg-gray-800 p-8">
+      <div className="shadow-2xl rounded-2xl overflow-hidden" style={{
+        maxWidth: '90vw',
+        maxHeight: '70vh',
+      }}>
+        <Stage
+          ref={stageRef}
+          width={CANVAS_WIDTH * zoom}
+          height={CANVAS_HEIGHT * zoom}
+          scaleX={zoom}
+          scaleY={zoom}
+          onClick={(e: any) => {
+            // Deselect if clicking stage background
+            if (e.target === e.target.getStage()) {
+              setSelectedElementId(null)
+            }
+          }}
+        >
+          <Layer>
+            {renderBackground()}
+            {/* Sort elements by zIndex before rendering */}
+            {[...currentSlide.elements]
+              .sort((a, b) => (a.props.zIndex || 0) - (b.props.zIndex || 0))
+              .map((element, index) => renderElement(element, index))}
+          </Layer>
+        </Stage>
+      </div>
     </div>
   )
 }

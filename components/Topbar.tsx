@@ -10,11 +10,11 @@ export default function Topbar({ onGenerateClick }: TopbarProps) {
   const { presentation, toggleRightPanel, isRightPanelOpen, toggleDarkMode, isDarkMode } = useEditorStore()
   
   return (
-    <div className="h-16 border-b border-white/5 bg-surface-1 flex items-center justify-between px-6">
+    <div className="h-16 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-1 flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
-        <h1 className="font-heading text-xl font-bold">Slide Builder</h1>
+        <h1 className="font-heading text-xl font-bold text-gray-900 dark:text-white">Slide Builder</h1>
         {presentation && (
-          <span className="text-muted text-sm">
+          <span className="text-gray-600 dark:text-muted text-sm">
             {presentation.title || 'Untitled Presentation'}
           </span>
         )}
@@ -24,7 +24,7 @@ export default function Topbar({ onGenerateClick }: TopbarProps) {
         {/* Dark Mode Toggle */}
         <button 
           onClick={toggleDarkMode}
-          className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-surface-2 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
           title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
         >
           {isDarkMode ? (
@@ -41,7 +41,7 @@ export default function Topbar({ onGenerateClick }: TopbarProps) {
         {/* Panel Toggle */}
         <button 
           onClick={toggleRightPanel}
-          className="p-2 hover:bg-surface-2 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 dark:hover:bg-surface-2 rounded-lg transition-colors text-gray-700 dark:text-gray-300"
           title={isRightPanelOpen ? 'Hide inspector' : 'Show inspector'}
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">

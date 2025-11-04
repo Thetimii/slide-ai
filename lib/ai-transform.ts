@@ -1,267 +1,147 @@
-import { AISlide, Slide, SlideElement, THEME_PRESETS, CANVAS_WIDTH, CANVAS_HEIGHT } from './types'
+import { Slide, SlideElement, CANVAS_WIDTH, CANVAS_HEIGHT } from './types'
+
+interface CinematicElement {
+  type: 'text' | 'shape' | 'gradient' | 'image'
+  x: number
+  y: number
+  width?: number
+  height?: number
+  content?: string
+  fontSize?: number
+  fontFamily?: string
+  fontWeight?: string
+  color?: string
+  opacity?: number
+  rotation?: number
+  blur?: number
+  shadow?: {
+    x: number
+    y: number
+    blur: number
+    color: string
+  }
+  gradient?: {
+    type: 'linear' | 'radial'
+    colors: string[]
+    angle?: number
+  }
+  animation?: {
+    type: 'fadeIn' | 'slideIn' | 'scale' | 'none'
+    duration: number
+    delay: number
+  }
+  texture?: string
+  parallaxDepth?: number
+}
+
+interface CinematicSlide {
+  id: string
+  title?: string
+  mood: string
+  composition: string
+  background: {
+    type: 'solid' | 'gradient' | 'image'
+    colors?: string[]
+    gradientAngle?: number
+    imageUrl?: string
+    blur?: number
+  }
+  elements: CinematicElement[]
+}
 
 /**
- * Transforms AI-generated slides into renderable slide objects with proper layout
+ * Transforms AI-generated cinematic slides into renderable slide objects
  */
-export function transformAISlideToRenderable(
-  aiSlide: AISlide,
+export function transformCinematicSlide(
+  cinematicSlide: CinematicSlide,
   index: number
 ): Slide {
-  const theme = THEME_PRESETS[aiSlide.theme] || THEME_PRESETS['modern-blue']
-  const layout = aiSlide.layout || 'hero'
-  
   const elements: SlideElement[] = []
   
-  // HERO LAYOUT - Large centered title, smaller subtitle below
-  if (layout === 'hero') {
-    elements.push({
-      id: `title-${index}`,
-      type: 'text',
-      props: {
-        x: 100,
-        y: 280,
-        width: CANVAS_WIDTH - 200,
-        height: 200,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.titleStyle,
-        fontSize: 85,
-        fontWeight: 700,
-        align: 'center',
-      },
-      content: aiSlide.title,
-    })
-    
-    if (aiSlide.content) {
+  // Transform each cinematic element to a renderable element
+  cinematicSlide.elements.forEach((elem, elemIndex) => {
+    if (elem.type === 'text') {
       elements.push({
-        id: `subtitle-${index}`,
+        id: `elem-${index}-${elemIndex}`,
         type: 'text',
         props: {
-          x: 200,
-          y: 520,
-          width: CANVAS_WIDTH - 400,
-          height: 150,
-          zIndex: 10,
+          x: elem.x,
+          y: elem.y,
+          width: elem.width || 400,
+          height: elem.height || 100,
+          zIndex: 10 + elemIndex,
+          opacity: elem.opacity || 1,
+          rotation: elem.rotation || 0,
         },
         style: {
-          ...theme.bodyStyle,
-          fontSize: 32,
-          fontWeight: 400,
-          align: 'center',
+          fontSize: elem.fontSize || 32,
+          fontFamily: elem.fontFamily || 'Inter',
+          fontWeight: parseInt(elem.fontWeight || '400'),
+          fill: elem.color || '#ffffff',
+          align: 'left',
+          lineHeight: 1.4,
         },
-        content: aiSlide.content,
+        content: elem.content || '',
+      })
+    } else if (elem.type === 'shape') {
+      // Add shape as a rect element
+      elements.push({
+        id: `shape-${index}-${elemIndex}`,
+        type: 'rect',
+        props: {
+          x: elem.x,
+          y: elem.y,
+          width: elem.width || 100,
+          height: elem.height || 100,
+          zIndex: 5 + elemIndex,
+          opacity: elem.opacity || 0.5,
+          rotation: elem.rotation || 0,
+        },
+        style: {
+          fill: elem.color || '#ffffff',
+        },
       })
     }
+  })
+  
+  // Create background
+  let background: any = {
+    type: 'solid',
+    fill: '#1a1a2e',
   }
   
-  // SPLIT LAYOUT - Title top-left, content spans right side
-  else if (layout === 'split') {
-    elements.push({
-      id: `title-${index}`,
-      type: 'text',
-      props: {
-        x: 80,
-        y: 120,
-        width: 600,
-        height: 120,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.titleStyle,
-        fontSize: 52,
-        fontWeight: 700,
-        align: 'left',
-      },
-      content: aiSlide.title,
-    })
-    
-    elements.push({
-      id: `content-${index}`,
-      type: 'text',
-      props: {
-        x: 80,
-        y: 280,
-        width: CANVAS_WIDTH - 160,
-        height: 520,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.bodyStyle,
-        fontSize: 38,
-        fontWeight: 500,
-        align: 'left',
-        lineHeight: 1.6,
-      },
-      content: aiSlide.content,
-    })
-  }
-  
-  // MINIMAL LAYOUT - Small title, large quote-style content centered
-  else if (layout === 'minimal') {
-    elements.push({
-      id: `title-${index}`,
-      type: 'text',
-      props: {
-        x: 200,
-        y: 200,
-        width: CANVAS_WIDTH - 400,
-        height: 80,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.titleStyle,
-        fontSize: 28,
-        fontWeight: 600,
-        align: 'center',
-      },
-      content: aiSlide.title,
-    })
-    
-    elements.push({
-      id: `quote-${index}`,
-      type: 'text',
-      props: {
-        x: 180,
-        y: 320,
-        width: CANVAS_WIDTH - 360,
-        height: 400,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.bodyStyle,
-        fontSize: 44,
-        fontWeight: 400,
-        align: 'center',
-        lineHeight: 1.7,
-      },
-      content: aiSlide.content,
-    })
-  }
-  
-  // QUOTE LAYOUT - Large quote marks, centered text
-  else if (layout === 'quote') {
-    // Add decorative quote marks
-    elements.push({
-      id: `quote-mark-${index}`,
-      type: 'text',
-      props: {
-        x: 250,
-        y: 200,
-        width: 150,
-        height: 150,
-        zIndex: 5,
-        opacity: 0.15,
-      },
-      style: {
-        fontSize: 200,
-        fill: theme.titleStyle.fill,
-        align: 'left',
-      },
-      content: '"',
-    })
-    
-    elements.push({
-      id: `quote-text-${index}`,
-      type: 'text',
-      props: {
-        x: 200,
-        y: 300,
-        width: CANVAS_WIDTH - 400,
-        height: 350,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.bodyStyle,
-        fontSize: 46,
-        fontWeight: 500,
-        align: 'center',
-        lineHeight: 1.6,
-      },
-      content: aiSlide.content,
-    })
-    
-    elements.push({
-      id: `attribution-${index}`,
-      type: 'text',
-      props: {
-        x: 200,
-        y: 680,
-        width: CANVAS_WIDTH - 400,
-        height: 60,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.titleStyle,
-        fontSize: 24,
-        fontWeight: 600,
-        align: 'center',
-      },
-      content: aiSlide.title,
-    })
-  }
-  
-  // FOCUS LAYOUT - Massive single word/phrase
-  else if (layout === 'focus') {
-    elements.push({
-      id: `focus-${index}`,
-      type: 'text',
-      props: {
-        x: 100,
-        y: 300,
-        width: CANVAS_WIDTH - 200,
-        height: 300,
-        zIndex: 10,
-      },
-      style: {
-        ...theme.titleStyle,
-        fontSize: 120,
-        fontWeight: 900,
-        align: 'center',
-        letterSpacing: -2,
-      },
-      content: aiSlide.title,
-    })
-    
-    if (aiSlide.content) {
-      elements.push({
-        id: `focus-sub-${index}`,
-        type: 'text',
-        props: {
-          x: 200,
-          y: 620,
-          width: CANVAS_WIDTH - 400,
-          height: 80,
-          zIndex: 10,
-        },
-        style: {
-          ...theme.bodyStyle,
-          fontSize: 28,
-          fontWeight: 400,
-          align: 'center',
-        },
-        content: aiSlide.content,
-      })
+  if (cinematicSlide.background.type === 'gradient' && cinematicSlide.background.colors) {
+    background = {
+      type: 'gradient',
+      colors: cinematicSlide.background.colors,
+      angle: cinematicSlide.background.gradientAngle || 135,
+    }
+  } else if (cinematicSlide.background.type === 'solid' && cinematicSlide.background.colors?.[0]) {
+    background = {
+      type: 'solid',
+      fill: cinematicSlide.background.colors[0],
     }
   }
   
   return {
     id: `slide-${index}-${Date.now()}`,
-    background: theme.background,
+    background,
     elements,
     meta: {
-      title: aiSlide.title,
-      notes: aiSlide.content,
-      theme: aiSlide.theme,
+      title: cinematicSlide.title || `Slide ${index + 1}`,
+      notes: cinematicSlide.mood,
+      theme: 'cinematic',
     },
   }
 }
 
 /**
- * Transforms an array of AI slides into a complete slides JSON object
+ * Transforms an array of cinematic slides into a complete slides JSON object
  */
-export function transformAISlidesToJSON(aiSlides: AISlide[]) {
+export function transformAISlidesToJSON(cinematicResponse: { meta: any; slides: CinematicSlide[] }) {
   return {
-    slides: aiSlides.map((slide, index) => transformAISlideToRenderable(slide, index)),
+    slides: cinematicResponse.slides.map((slide, index) => 
+      transformCinematicSlide(slide, index)
+    ),
   }
 }

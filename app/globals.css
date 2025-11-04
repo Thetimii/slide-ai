@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Inter:wght@400;500;600;700&display=swap');
+  
+  body {
+    @apply bg-bg text-fg font-sans antialiased;
+  }
+  
+  .light body {
+    @apply bg-gray-50 text-gray-900;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-primary text-bg font-medium rounded-2xl transition-all duration-200;
+    @apply hover:shadow-lg hover:shadow-primary/20 hover:translate-y-0.5;
+  }
+  
+  .btn-secondary {
+    @apply px-6 py-3 bg-surface-2 text-fg font-medium rounded-2xl border border-white/10 transition-all duration-200;
+    @apply hover:bg-surface-3 hover:translate-y-0.5 hover:ring-1 hover:ring-white/20;
+  }
+  
+  .light .btn-secondary {
+    @apply bg-white border-gray-200 text-gray-900 hover:bg-gray-100;
+  }
+  
+  .card {
+    @apply bg-surface-1 rounded-3xl border border-white/5 backdrop-blur-sm;
+    @apply shadow-lg shadow-black/20;
+  }
+  
+  .light .card {
+    @apply bg-white border-gray-200 shadow-gray-200;
+  }
+  
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+  
+  .light .glass {
+    @apply bg-white/80 border-gray-200;
+  }
+}

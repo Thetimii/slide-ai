@@ -1,0 +1,205 @@
+slide-ai/
+│
+├── 📖 Documentation
+│   ├── START_HERE.md ⭐ Read this first!
+│   ├── QUICKSTART.md - 5-minute setup guide
+│   ├── README.md - Complete project overview
+│   ├── SETUP.md - Detailed setup instructions
+│   ├── ARCHITECTURE.md - Component architecture
+│   ├── CHEATSHEET.md - Developer quick reference
+│   ├── PROJECT_SUMMARY.md - Build status & features
+│   └── VERIFICATION.md - Testing checklist
+│
+├── 🎨 Application Code
+│   ├── app/
+│   │   ├── layout.tsx - Root layout with fonts
+│   │   ├── page.tsx - Landing page (hero, features)
+│   │   ├── globals.css - Global styles + Tailwind
+│   │   │
+│   │   ├── dashboard/
+│   │   │   └── page.tsx - Main editor workspace
+│   │   │
+│   │   └── api/ - Backend API routes
+│   │       ├── create-demo-user/
+│   │       │   └── route.ts - Anonymous user creation
+│   │       ├── generate-slides/
+│   │       │   └── route.ts - AI slide generation
+│   │       ├── transfer-demo-data/
+│   │       │   └── route.ts - Demo → Real user migration
+│   │       └── presentations/
+│   │           └── route.ts - CRUD operations
+│
+├── 🧩 Components
+│   ├── components/
+│   │   ├── Topbar.tsx - Navigation bar
+│   │   ├── EditorCanvas.tsx - Konva canvas editor
+│   │   ├── SlidesList.tsx - Left sidebar thumbnails
+│   │   ├── RightInspector.tsx - Property editor panel
+│   │   └── GenerateSlidesModal.tsx - AI generation form
+│
+├── 📚 Libraries & Utilities
+│   ├── lib/
+│   │   ├── types.ts - TypeScript types & Zod schemas
+│   │   ├── store.ts - Zustand global state
+│   │   ├── openrouter.ts - AI API integration
+│   │   ├── ai-transform.ts - AI → Renderable transformer
+│   │   ├── utils.ts - Helper functions
+│   │   │
+│   │   └── supabase/
+│   │       ├── client.ts - Browser Supabase client
+│   │       ├── server.ts - Server Supabase client
+│   │       ├── service-role.ts - Admin Supabase client
+│   │       └── database.types.ts - Database TypeScript types
+│
+├── 🗄️ Database
+│   └── supabase/
+│       └── schema.sql - Complete database initialization
+│           ├── Tables: users, presentations, prompts_history, exports
+│           ├── RLS policies for security
+│           └── Storage bucket configuration
+│
+├── ⚙️ Configuration Files
+│   ├── package.json - Dependencies & scripts
+│   ├── tsconfig.json - TypeScript config
+│   ├── next.config.js - Next.js settings
+│   ├── tailwind.config.js - Custom theme & colors
+│   ├── postcss.config.js - PostCSS config
+│   ├── middleware.ts - Auth session middleware
+│   ├── .prettierrc - Code formatting rules
+│   ├── .gitignore - Git ignore patterns
+│   ├── .env.example - Environment template
+│   └── .env.local - Your secrets (create this!)
+│
+└── 📦 Node Modules (after npm install)
+    └── node_modules/ - Dependencies
+
+---
+
+📊 Project Stats:
+├── Total Files: ~35
+├── Lines of Code: ~4,000+
+├── Components: 7 React components
+├── API Routes: 5 routes
+├── Database Tables: 5 tables with RLS
+├── Documentation: 8 comprehensive guides
+└── Theme Presets: 3 configured
+
+---
+
+🎯 File Purpose Quick Reference:
+
+Landing Page:
+  app/page.tsx → Hero, features, CTA
+
+Editor Workspace:
+  app/dashboard/page.tsx → Main editor
+  components/EditorCanvas.tsx → Konva canvas
+  components/SlidesList.tsx → Left sidebar
+  components/RightInspector.tsx → Right panel
+  components/Topbar.tsx → Top navigation
+
+AI Generation:
+  app/api/generate-slides/route.ts → API endpoint
+  lib/openrouter.ts → AI integration
+  lib/ai-transform.ts → Response transformation
+  components/GenerateSlidesModal.tsx → UI form
+
+State Management:
+  lib/store.ts → Zustand store (global state)
+
+Database:
+  supabase/schema.sql → All tables & policies
+  lib/supabase/*.ts → Client factories
+
+Authentication:
+  app/api/create-demo-user/route.ts → Demo users
+  app/api/transfer-demo-data/route.ts → Data migration
+  middleware.ts → Session management
+
+Styling:
+  app/globals.css → Custom Tailwind utilities
+  tailwind.config.js → Theme configuration
+
+Types:
+  lib/types.ts → All TypeScript types
+  lib/supabase/database.types.ts → DB types
+
+---
+
+🚀 Getting Started Path:
+
+1. START_HERE.md ⭐
+2. npm install
+3. .env.local (copy from .env.example)
+4. supabase/schema.sql (run in Supabase)
+5. npm run dev
+6. localhost:3000
+
+---
+
+💡 Common File Modifications:
+
+Add a new theme:
+  → Edit lib/types.ts → THEME_PRESETS
+
+Customize colors:
+  → Edit tailwind.config.js → colors
+
+Add a new component:
+  → Create components/YourComponent.tsx
+
+Add a new API route:
+  → Create app/api/your-route/route.ts
+
+Modify database:
+  → Edit supabase/schema.sql
+  → Run in Supabase SQL Editor
+  → Regenerate types if needed
+
+---
+
+🔍 Where to Find Things:
+
+Need to understand data flow?
+  → Read ARCHITECTURE.md
+
+Need quick code examples?
+  → Check CHEATSHEET.md
+
+Need to debug an issue?
+  → Check VERIFICATION.md
+
+Need setup help?
+  → Follow SETUP.md or QUICKSTART.md
+
+Need to know what's built?
+  → Read PROJECT_SUMMARY.md
+
+Need to see all features?
+  → Read README.md
+
+---
+
+✨ Special Files:
+
+START_HERE.md ⭐
+  → Main entry point, read this first!
+
+supabase/schema.sql 🗄️
+  → Complete database setup, run in Supabase
+
+lib/types.ts 📐
+  → All TypeScript types, theme presets
+
+lib/store.ts 🧠
+  → Global state management with Zustand
+
+components/EditorCanvas.tsx 🎨
+  → Main Konva canvas implementation
+
+.env.local 🔐
+  → Your secrets (you create this!)
+
+---
+
+Happy coding! 🚀

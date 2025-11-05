@@ -49,7 +49,38 @@ Extract 2-4 keywords per slide for visual search. Keep titles short (3-7 words).
     userPrompt,
   })
 
-  return response.slides
+  // Validate response
+  if (!response || !Array.isArray(response.slides)) {
+    console.warn('AI returned invalid segmentation, using fallback')
+    return getDefaultSegments(input)
+  }
+
+  // Ensure each slide has required fields
+  return response.slides.map((slide: any, idx: number) => ({
+    slide_index: slide.slide_index || idx + 1,
+    title: slide.title || `Slide ${idx + 1}`,
+    subtitle: slide.subtitle || '',
+    body_text: slide.body_text || '',
+    keywords: Array.isArray(slide.keywords) ? slide.keywords : ['presentation', 'slide'],
+  }))
+}
+
+// Fallback segmentation when AI fails
+function getDefaultSegments(input: UserInput): SlideSegment[] {
+  const segments: SlideSegment[] = []
+  const lines = input.prompt.split('\n').filter(l => l.trim())
+  
+  for (let i = 0; i < input.num_slides; i++) {
+    segments.push({
+      slide_index: i + 1,
+      title: lines[i] || `Slide ${i + 1}`,
+      subtitle: '',
+      body_text: lines[i] || input.prompt.substring(0, 100),
+      keywords: ['presentation', 'slide'],
+    })
+  }
+  
+  return segments
 }
 
 // ============= STEP 3: Layout Planning =============
@@ -104,7 +135,26 @@ Plan layout positions.`
     userPrompt,
   })
 
+  // Validate and provide fallback if AI returns invalid structure
+  if (!response || !Array.isArray(response.elements)) {
+    console.warn('AI returned invalid layout, using fallback')
+    return getDefaultLayout(segment)
+  }
+
   return response
+}
+
+// Fallback layout when AI fails
+function getDefaultLayout(segment: SlideSegment): LayoutPlan {
+  return {
+    composition: 'centered',
+    elements: [
+      { type: 'headline', x: 100, y: 250, width: 1400, align: 'center' },
+      { type: 'body', x: 200, y: 450, width: 1200, align: 'center' },
+      { type: 'blob', x: 50, y: 650, width: 300, height: 250 },
+      { type: 'icon_placeholder', x: 1350, y: 700 },
+    ],
+  }
 }
 
 // ============= STEP 4: Image Selection =============
@@ -146,9 +196,12 @@ export async function generateAssets(
   // Get themed gradient
   const gradient = getThemedGradient(style)
   
+  // Ensure layout.elements exists and is an array
+  const elements = Array.isArray(layout?.elements) ? layout.elements : []
+  
   // Generate blobs for decorative elements
   const blobs: SlideAssets['blobs'] = []
-  layout.elements
+  elements
     .filter((e) => e.type === 'blob')
     .forEach((elem) => {
       const blobData = createBlob({
@@ -169,7 +222,7 @@ export async function generateAssets(
   
   // Map icons from keywords
   const icons: IconConfig[] = []
-  layout.elements
+  elements
     .filter((e) => e.type === 'icon_placeholder')
     .forEach((elem, idx) => {
       const keyword = segment.keywords[idx] || 'default'
@@ -309,6 +362,10 @@ export function assembleSlide(
   assets: SlideAssets,
   refinement: RefinementResult
 ): AssembledSlide {
+  // Safely access layout.elements
+  const elements = Array.isArray(layout?.elements) ? layout.elements : []
+  const imagePlaceholder = elements.find((e) => e.type === 'image_placeholder')
+  
   return {
     background: {
       gradient: {
@@ -341,10 +398,10 @@ export function assembleSlide(
           url: assets.image.src.large,
           photographer: assets.image.photographer,
           fit: 'cover',
-          x: layout.elements.find((e) => e.type === 'image_placeholder')?.x,
-          y: layout.elements.find((e) => e.type === 'image_placeholder')?.y,
-          width: layout.elements.find((e) => e.type === 'image_placeholder')?.width,
-          height: layout.elements.find((e) => e.type === 'image_placeholder')?.height,
+          x: imagePlaceholder?.x,
+          y: imagePlaceholder?.y,
+          width: imagePlaceholder?.width,
+          height: imagePlaceholder?.height,
         }
       : null,
     text: {

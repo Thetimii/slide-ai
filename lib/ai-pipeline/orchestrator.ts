@@ -470,7 +470,63 @@ export async function generateSlidesFullPipeline(
   return assembledSlides
 }
 
-// ============= HELPER: Call OpenRouter Free Model =============
+// ============= SAFE JSON PARSER =============
+/**
+ * Safely extract and parse JSON from AI responses.
+ * Handles code fences, malformed quotes, and control characters.
+ */
+function extractJSON(input: string, context: string = 'unknown'): any {
+  console.log(`[JSON Parser] Attempting to parse response for: ${context}`)
+  console.log(`[JSON Parser] Raw input length: ${input.length} chars`)
+  console.log(`[JSON Parser] First 200 chars:`, input.substring(0, 200))
+  
+  try {
+    // Strategy 1: Try direct parse
+    const parsed = JSON.parse(input)
+    console.log(`[JSON Parser] ✅ Direct parse successful for ${context}`)
+    return parsed
+  } catch (directError) {
+    console.log(`[JSON Parser] ⚠️  Direct parse failed for ${context}:`, 
+      directError instanceof Error ? directError.message : String(directError))
+  }
+  
+  try {
+    // Strategy 2: Extract from code fences
+    const match = input.match(/```json\s*([\s\S]*?)\s*```/)
+    if (match) {
+      console.log(`[JSON Parser] 🔍 Found JSON code fence for ${context}`)
+      const jsonText = match[1].trim()
+      const parsed = JSON.parse(jsonText)
+      console.log(`[JSON Parser] ✅ Code fence parse successful for ${context}`)
+      return parsed
+    }
+  } catch (fenceError) {
+    console.log(`[JSON Parser] ⚠️  Code fence parse failed for ${context}:`,
+      fenceError instanceof Error ? fenceError.message : String(fenceError))
+  }
+  
+  try {
+    // Strategy 3: Cleanup and retry
+    console.log(`[JSON Parser] 🧹 Attempting cleanup for ${context}`)
+    const cleaned = input
+      .trim()
+      .replace(/(\r\n|\n|\r)/gm, ' ') // Replace newlines with spaces
+      .replace(/\\"/g, '"') // Fix escaped quotes
+      .replace(/"|"/g, '"') // Fix smart quotes
+      .replace(/[\u0000-\u001F]+/g, '') // Remove control characters
+    
+    const parsed = JSON.parse(cleaned)
+    console.log(`[JSON Parser] ✅ Cleanup parse successful for ${context}`)
+    return parsed
+  } catch (cleanError) {
+    console.error(`[JSON Parser] ❌ All strategies failed for ${context}`)
+    console.error(`[JSON Parser] Final error:`, 
+      cleanError instanceof Error ? cleanError.message : String(cleanError))
+    console.error(`[JSON Parser] Full input (first 1000 chars):`, input.substring(0, 1000))
+    throw new Error(`Failed to parse JSON for ${context}: ${cleanError instanceof Error ? cleanError.message : 'Unknown error'}`)
+  }
+}
+
 async function callOpenRouterFree({
   systemPrompt,
   userPrompt,
@@ -478,9 +534,11 @@ async function callOpenRouterFree({
   systemPrompt: string
   userPrompt: string
 }): Promise<any> {
+  console.log('[OpenRouter] 📤 Making API call...')
   const apiKey = process.env.OPENROUTER_API_KEY
   
   if (!apiKey) {
+    console.error('[OpenRouter] ❌ API key not configured')
     throw new Error('OPENROUTER_API_KEY not configured')
   }
   
@@ -504,32 +562,23 @@ async function callOpenRouterFree({
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('OpenRouter error:', errorText)
+    console.error('[OpenRouter] ❌ API error:', response.status, errorText)
     throw new Error(`OpenRouter API error: ${response.status}`)
   }
+  
+  console.log('[OpenRouter] ✅ API call successful')
   
   const data = await response.json()
   const content = data.choices[0].message.content
   
-  // Safely extract and parse JSON from AI response
-  try {
-    // Try to extract JSON from code fences first
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
-    const cleanJson = jsonMatch ? jsonMatch[1].trim() : content.trim()
-    
-    return JSON.parse(cleanJson)
-  } catch (parseError) {
-    console.error('Failed to parse AI JSON response:', {
-      error: parseError instanceof Error ? parseError.message : String(parseError),
-      content: content.substring(0, 500), // First 500 chars for debugging
-      contentLength: content.length,
-    })
-    
-    // Try one more time with just the raw content
-    try {
-      return JSON.parse(content)
-    } catch {
-      throw new Error('AI returned invalid JSON. Please try again.')
-    }
-  }
+  console.log('[OpenRouter] Response received, length:', content.length, 'chars')
+  
+  // Extract the context from system prompt for better logging
+  const context = systemPrompt.includes('presentation designer') 
+    ? 'segmentation' 
+    : systemPrompt.includes('visual designer')
+    ? 'layout'
+    : 'unknown'
+  
+  return extractJSON(content, context)
 }

@@ -32,6 +32,17 @@ export async function generateSlidesWithProgress(
   input: UserInput,
   onProgress: ProgressCallback
 ): Promise<AssembledSlide[]> {
+  console.log('\n========================================')
+  console.log('🚀 STARTING SLIDE GENERATION PIPELINE')
+  console.log('========================================')
+  console.log('Input:', {
+    promptLength: input.prompt.length,
+    numSlides: input.num_slides,
+    tone: input.tone,
+    style: input.style,
+    useWordForWord: input.use_word_for_word,
+  })
+  
   onProgress({
     type: 'status',
     step: 'segmentation',
@@ -40,7 +51,10 @@ export async function generateSlidesWithProgress(
   })
   
   // Step 1-2: Segmentation
+  console.log('\n--- STEP 1: SEGMENTATION ---')
   const segments = await segmentText(input)
+  console.log('✅ Segmentation complete:', segments.length, 'slides')
+  console.log('Slide titles:', segments.map(s => s.title))
   
   onProgress({
     type: 'status',
@@ -58,6 +72,10 @@ export async function generateSlidesWithProgress(
     const segment = segments[i]
     const baseProgress = 15 + (i * progressPerSlide)
     
+    console.log(`\n--- PROCESSING SLIDE ${i + 1}/${segments.length} ---`)
+    console.log('Title:', segment.title)
+    console.log('Keywords:', segment.keywords.join(', '))
+    
     onProgress({
       type: 'status',
       step: 'slide_start',
@@ -68,6 +86,7 @@ export async function generateSlidesWithProgress(
     })
     
     // Step 3: Layout planning
+    console.log('  → Planning layout...')
     onProgress({
       type: 'status',
       step: 'layout',
@@ -77,6 +96,7 @@ export async function generateSlidesWithProgress(
     })
     
     const layout = await planLayout(segment, input.style)
+    console.log('  ✅ Layout complete:', layout.composition, `(${layout.elements?.length || 0} elements)`)
     
     onProgress({
       type: 'status',
@@ -87,6 +107,7 @@ export async function generateSlidesWithProgress(
     })
     
     // Step 4-8: Asset generation
+    console.log('  → Generating assets (blobs, gradients, icons, images)...')
     onProgress({
       type: 'status',
       step: 'assets',
@@ -96,6 +117,12 @@ export async function generateSlidesWithProgress(
     })
     
     const assets = await generateAssets(layout, segment, input.style, input.tone)
+    console.log('  ✅ Assets generated:', {
+      blobs: assets.blobs.length,
+      icons: assets.icons.length,
+      hasImage: !!assets.image,
+      imageBy: assets.image?.photographer,
+    })
     
     if (assets.image) {
       onProgress({
@@ -108,6 +135,7 @@ export async function generateSlidesWithProgress(
     }
     
     // Step 10: Assembly
+    console.log('  → Assembling slide...')
     onProgress({
       type: 'status',
       step: 'assembling',
@@ -122,6 +150,7 @@ export async function generateSlidesWithProgress(
     })
     
     assembledSlides.push(assembled)
+    console.log(`  ✅ Slide ${i + 1} assembled successfully!`)
     
     // Send slide preview
     onProgress({
@@ -135,12 +164,17 @@ export async function generateSlidesWithProgress(
     })
   }
   
+  console.log('\n--- FINALIZING ---')
   onProgress({
     type: 'status',
     step: 'finalizing',
     message: '🎉 All slides designed! Finalizing presentation...',
     percentage: 95,
   })
+  
+  console.log('✅ PIPELINE COMPLETE!')
+  console.log('Total slides generated:', assembledSlides.length)
+  console.log('========================================\n')
   
   return assembledSlides
 }
@@ -176,22 +210,33 @@ Rules:
     ? `Use this text word-for-word, split into ${input.num_slides} slides:\n\n${input.prompt}`
     : `Transform this into ${input.num_slides} professional slides:\n\n${input.prompt}\n\nTone: ${input.tone}\nStyle: ${input.style}`
 
-  const response = await callOpenRouterFree({ systemPrompt, userPrompt })
+  try {
+    const response = await callOpenRouterFree({ systemPrompt, userPrompt })
 
-  if (!response || !Array.isArray(response.slides)) {
+    if (!response || !Array.isArray(response.slides)) {
+      console.warn('[Segmentation] ⚠️  AI returned invalid format, using fallback')
+      return getDefaultSegments(input)
+    }
+
+    const mappedSlides = response.slides.map((slide: any, idx: number) => ({
+      slide_index: slide.slide_index || idx + 1,
+      title: slide.title || `Slide ${idx + 1}`,
+      subtitle: slide.subtitle || '',
+      body_text: slide.body_text || '',
+      keywords: Array.isArray(slide.keywords) ? slide.keywords : ['presentation', 'slide'],
+    }))
+    
+    console.log('[Segmentation] ✅ Successfully parsed', mappedSlides.length, 'slides')
+    return mappedSlides
+  } catch (error) {
+    console.error('[Segmentation] ❌ Error during segmentation:', error)
+    console.warn('[Segmentation] ⚠️  Falling back to default segmentation')
     return getDefaultSegments(input)
   }
-
-  return response.slides.map((slide: any, idx: number) => ({
-    slide_index: slide.slide_index || idx + 1,
-    title: slide.title || `Slide ${idx + 1}`,
-    subtitle: slide.subtitle || '',
-    body_text: slide.body_text || '',
-    keywords: Array.isArray(slide.keywords) ? slide.keywords : ['presentation', 'slide'],
-  }))
 }
 
 function getDefaultSegments(input: UserInput): SlideSegment[] {
+  console.log('[Segmentation] Using default fallback segmentation')
   const segments: SlideSegment[] = []
   const lines = input.prompt.split('\n').filter(l => l.trim())
   
@@ -392,6 +437,63 @@ function assembleSlide(
   }
 }
 
+// ============= SAFE JSON PARSER =============
+/**
+ * Safely extract and parse JSON from AI responses.
+ * Handles code fences, malformed quotes, and control characters.
+ */
+function extractJSON(input: string, context: string = 'unknown'): any {
+  console.log(`[JSON Parser] Attempting to parse response for: ${context}`)
+  console.log(`[JSON Parser] Raw input length: ${input.length} chars`)
+  console.log(`[JSON Parser] First 200 chars:`, input.substring(0, 200))
+  
+  try {
+    // Strategy 1: Try direct parse
+    const parsed = JSON.parse(input)
+    console.log(`[JSON Parser] ✅ Direct parse successful for ${context}`)
+    return parsed
+  } catch (directError) {
+    console.log(`[JSON Parser] ⚠️  Direct parse failed for ${context}:`, 
+      directError instanceof Error ? directError.message : String(directError))
+  }
+  
+  try {
+    // Strategy 2: Extract from code fences
+    const match = input.match(/```json\s*([\s\S]*?)\s*```/)
+    if (match) {
+      console.log(`[JSON Parser] 🔍 Found JSON code fence for ${context}`)
+      const jsonText = match[1].trim()
+      const parsed = JSON.parse(jsonText)
+      console.log(`[JSON Parser] ✅ Code fence parse successful for ${context}`)
+      return parsed
+    }
+  } catch (fenceError) {
+    console.log(`[JSON Parser] ⚠️  Code fence parse failed for ${context}:`,
+      fenceError instanceof Error ? fenceError.message : String(fenceError))
+  }
+  
+  try {
+    // Strategy 3: Cleanup and retry
+    console.log(`[JSON Parser] 🧹 Attempting cleanup for ${context}`)
+    const cleaned = input
+      .trim()
+      .replace(/(\r\n|\n|\r)/gm, ' ') // Replace newlines with spaces
+      .replace(/\\"/g, '"') // Fix escaped quotes
+      .replace(/"|"/g, '"') // Fix smart quotes
+      .replace(/[\u0000-\u001F]+/g, '') // Remove control characters
+    
+    const parsed = JSON.parse(cleaned)
+    console.log(`[JSON Parser] ✅ Cleanup parse successful for ${context}`)
+    return parsed
+  } catch (cleanError) {
+    console.error(`[JSON Parser] ❌ All strategies failed for ${context}`)
+    console.error(`[JSON Parser] Final error:`, 
+      cleanError instanceof Error ? cleanError.message : String(cleanError))
+    console.error(`[JSON Parser] Full input (first 1000 chars):`, input.substring(0, 1000))
+    throw new Error(`Failed to parse JSON for ${context}: ${cleanError instanceof Error ? cleanError.message : 'Unknown error'}`)
+  }
+}
+
 async function callOpenRouterFree({
   systemPrompt,
   userPrompt,
@@ -399,11 +501,33 @@ async function callOpenRouterFree({
   systemPrompt: string
   userPrompt: string
 }): Promise<any> {
+  console.log('[OpenRouter] 📤 Making API call...')
+  console.log('[OpenRouter] User prompt length:', userPrompt.length, 'chars')
+  
   const apiKey = process.env.OPENROUTER_API_KEY
   
   if (!apiKey) {
+    console.error('[OpenRouter] ❌ API key not configured')
     throw new Error('OPENROUTER_API_KEY not configured')
   }
+  
+  const requestBody = {
+    model: 'openai/gpt-oss-20b:free',
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 2000,
+  }
+  
+  console.log('[OpenRouter] Request config:', {
+    model: requestBody.model,
+    responseFormat: requestBody.response_format,
+    messageCount: requestBody.messages.length,
+    maxTokens: requestBody.max_tokens,
+  })
   
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
@@ -411,46 +535,28 @@ async function callOpenRouterFree({
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'openai/gpt-oss-20b:free',
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    }),
+    body: JSON.stringify(requestBody),
   })
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('OpenRouter error:', errorText)
+    console.error('[OpenRouter] ❌ API error:', response.status, errorText)
     throw new Error(`OpenRouter API error: ${response.status}`)
   }
+  
+  console.log('[OpenRouter] ✅ API call successful')
   
   const data = await response.json()
   const content = data.choices[0].message.content
   
-  // Safely extract and parse JSON from AI response
-  try {
-    // Try to extract JSON from code fences first
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
-    const cleanJson = jsonMatch ? jsonMatch[1].trim() : content.trim()
-    
-    return JSON.parse(cleanJson)
-  } catch (parseError) {
-    console.error('Failed to parse AI JSON response:', {
-      error: parseError instanceof Error ? parseError.message : String(parseError),
-      content: content.substring(0, 500), // First 500 chars for debugging
-      contentLength: content.length,
-    })
-    
-    // Try one more time with just the raw content
-    try {
-      return JSON.parse(content)
-    } catch {
-      throw new Error('AI returned invalid JSON. Please try again.')
-    }
-  }
+  console.log('[OpenRouter] Response received, length:', content.length, 'chars')
+  
+  // Extract the context from system prompt for better logging
+  const context = systemPrompt.includes('presentation designer') 
+    ? 'segmentation' 
+    : systemPrompt.includes('visual designer')
+    ? 'layout'
+    : 'unknown'
+  
+  return extractJSON(content, context)
 }

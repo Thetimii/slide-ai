@@ -515,6 +515,23 @@ function extractJSON(input: string, context: string = 'unknown'): any {
   }
 }
 
+// Rate limiter: 20 requests per minute = 3 seconds between requests
+let lastRequestTime = 0
+const MIN_REQUEST_INTERVAL = 3000 // 3 seconds
+
+async function waitForRateLimit() {
+  const now = Date.now()
+  const timeSinceLastRequest = now - lastRequestTime
+  
+  if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+    const waitTime = MIN_REQUEST_INTERVAL - timeSinceLastRequest
+    console.log(`[Rate Limiter] ⏳ Waiting ${waitTime}ms to respect rate limit...`)
+    await new Promise(resolve => setTimeout(resolve, waitTime))
+  }
+  
+  lastRequestTime = Date.now()
+}
+
 async function callOpenRouterFree({
   systemPrompt,
   userPrompt,
@@ -522,6 +539,9 @@ async function callOpenRouterFree({
   systemPrompt: string
   userPrompt: string
 }): Promise<any> {
+  // Wait for rate limit before making request
+  await waitForRateLimit()
+  
   console.log('[OpenRouter] 📤 Making API call...')
   console.log('[OpenRouter] User prompt length:', userPrompt.length, 'chars')
   

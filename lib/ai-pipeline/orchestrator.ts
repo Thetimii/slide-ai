@@ -108,11 +108,11 @@ export interface LayoutPlan {
 }
 
 export async function planLayout(segment: SlideSegment, style: string): Promise<LayoutPlan> {
-  const systemPrompt = `You are a visual designer. Plan element positions for a 1600x900px slide using professional composition rules.
+  const systemPrompt = `You are a JSON-only API. Return ONLY valid JSON with NO commentary, explanations, or markdown.
 
-CRITICAL: Return ONLY valid JSON. Do not include markdown formatting or code fences.
+Task: Plan element positions for a 1600x900px slide.
 
-Expected format:
+REQUIRED OUTPUT FORMAT (copy this structure exactly):
 {
   "composition": "rule_of_thirds",
   "elements": [
@@ -124,15 +124,15 @@ Expected format:
   ]
 }
 
-Composition types: "rule_of_thirds", "centered", "asymmetric"
-Element types: "headline", "body", "image_placeholder", "blob", "icon_placeholder"
+Valid composition values: "rule_of_thirds", "centered", "asymmetric"
+Valid element types: "headline", "body", "image_placeholder", "blob", "icon_placeholder"
 
-Rules:
-- rule_of_thirds: Align on 1/3 intersections (x: 533, 1067; y: 300, 600)
-- centered: Symmetric, title at top center
-- asymmetric: Dynamic, off-center, balanced
-- Always include headline and at least one decorative element
-- Style: ${style}`
+IMPORTANT: 
+- Start your response with { and end with }
+- No text before or after the JSON
+- No explanations or commentary
+- Use double quotes for all strings
+- Style preference: ${style}`
 
   const userPrompt = `Slide ${segment.slide_index}:
 Title: ${segment.title}
@@ -506,17 +506,38 @@ function extractJSON(input: string, context: string = 'unknown'): any {
   }
   
   try {
-    // Strategy 3: Cleanup and retry
-    console.log(`[JSON Parser] 🧹 Attempting cleanup for ${context}`)
-    const cleaned = input
-      .trim()
+    // Strategy 3: Extract JSON object from text
+    console.log(`[JSON Parser] 🔍 Searching for JSON object in text for ${context}`)
+    const jsonMatch = input.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      const extracted = jsonMatch[0]
+      console.log(`[JSON Parser] Found JSON-like content, length:`, extracted.length)
+      const parsed = JSON.parse(extracted)
+      console.log(`[JSON Parser] ✅ Extraction parse successful for ${context}`)
+      return parsed
+    }
+  } catch (extractError) {
+    console.log(`[JSON Parser] ⚠️  Extraction failed for ${context}:`,
+      extractError instanceof Error ? extractError.message : String(extractError))
+  }
+  
+  try {
+    // Strategy 4: Aggressive cleanup and retry
+    console.log(`[JSON Parser] 🧹 Attempting aggressive cleanup for ${context}`)
+    let cleaned = input.trim()
+    
+    // Remove any "commentary to=assistant{" or similar junk
+    cleaned = cleaned.replace(/^[^{]*\{/, '{') // Remove everything before first {
+    cleaned = cleaned.replace(/\}[^}]*$/, '}') // Remove everything after last }
+    cleaned = cleaned
       .replace(/(\r\n|\n|\r)/gm, ' ') // Replace newlines with spaces
       .replace(/\\"/g, '"') // Fix escaped quotes
       .replace(/"|"/g, '"') // Fix smart quotes
       .replace(/[\u0000-\u001F]+/g, '') // Remove control characters
+      .replace(/to=/g, '": "') // Fix malformed "to=" syntax
     
     const parsed = JSON.parse(cleaned)
-    console.log(`[JSON Parser] ✅ Cleanup parse successful for ${context}`)
+    console.log(`[JSON Parser] ✅ Aggressive cleanup successful for ${context}`)
     return parsed
   } catch (cleanError) {
     console.error(`[JSON Parser] ❌ All strategies failed for ${context}`)

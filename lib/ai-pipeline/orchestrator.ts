@@ -570,7 +570,7 @@ async function callOpenRouterFree({
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'openai/gpt-oss-20b:free',
+      model: 'qwen/qwen3-235b-a22b:free',
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: systemPrompt },
@@ -595,9 +595,9 @@ async function callOpenRouterFree({
   console.log('[OpenRouter] Response received, length:', content.length, 'chars')
   
   // Extract the context from system prompt for better logging
-  const context = systemPrompt.includes('presentation designer') 
+  const context = systemPrompt.includes('presentation designer') || systemPrompt.includes('Split the user')
     ? 'segmentation' 
-    : systemPrompt.includes('visual designer')
+    : systemPrompt.includes('Plan element positions') || systemPrompt.includes('1600x900px')
     ? 'layout'
     : 'unknown'
   

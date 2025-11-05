@@ -22,7 +22,9 @@ export default function SlidesList() {
   }
   
   // Safe access to slides with fallback
-  const slides = presentation.slides_json?.slides || []
+  const slides = Array.isArray(presentation.slides_json?.slides) 
+    ? presentation.slides_json.slides 
+    : []
   
   if (slides.length === 0) {
     return (
@@ -89,10 +91,10 @@ export default function SlidesList() {
             <div className="aspect-video bg-gray-200 dark:bg-surface-2 flex items-center justify-center p-4">
               <div className="text-center">
                 <p className="text-xs font-medium truncate">
-                  {slide.meta.title || `Slide ${index + 1}`}
+                  {slide.meta?.title || `Slide ${index + 1}`}
                 </p>
                 <p className="text-[10px] text-muted mt-1">
-                  {slide.elements.length} elements
+                  {Array.isArray(slide.elements) ? slide.elements.length : 0} elements
                 </p>
               </div>
             </div>

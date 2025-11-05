@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { callOpenRouter } from '@/lib/openrouter'
-import { transformAISlidesToJSON } from '@/lib/ai-transform'
+import { generateSlidesFullPipeline, type UserInput } from '@/lib/ai-pipeline/orchestrator'
 import { z } from 'zod'
 
 const SlideInputSchema = z.object({
@@ -37,28 +36,30 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData = GenerateSlidesRequestSchema.parse(body)
     
-    // Call OpenRouter AI to generate slides
-    let aiResponse
+    // Prepare input for AI pipeline
+    const combinedPrompt = validatedData.slides
+      .map((slide, idx) => `Slide ${idx + 1}: ${slide.content}`)
+      .join('\n\n')
+    
+    const pipelineInput: UserInput = {
+      prompt: combinedPrompt,
+      num_slides: validatedData.numSlides,
+      tone: validatedData.theme,
+      style: validatedData.style,
+      use_word_for_word: validatedData.useVerbatim,
+    }
+    
+    // Run AI pipeline
+    let assembledSlides
     try {
-      aiResponse = await callOpenRouter({
-        theme: validatedData.theme,
-        style: validatedData.style,
-        slides: validatedData.slides,
-        useUniformDesign: validatedData.useUniformDesign,
-        useVerbatim: validatedData.useVerbatim,
-      })
+      assembledSlides = await generateSlidesFullPipeline(pipelineInput)
     } catch (aiError) {
       console.error('AI generation failed:', aiError)
       
       // Retry once
       try {
-        aiResponse = await callOpenRouter({
-          theme: validatedData.theme,
-          style: validatedData.style,
-          slides: validatedData.slides,
-          useUniformDesign: validatedData.useUniformDesign,
-          useVerbatim: validatedData.useVerbatim,
-        })
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        assembledSlides = await generateSlidesFullPipeline(pipelineInput)
       } catch (retryError) {
         console.error('AI retry failed:', retryError)
         return NextResponse.json(
@@ -68,8 +69,15 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Transform AI slides to renderable format
-    const slidesJSON = transformAISlidesToJSON(aiResponse)
+    // Transform to database format
+    const slidesJSON = {
+      slides: assembledSlides,
+      meta: {
+        uniformDesign: validatedData.useUniformDesign,
+        theme: validatedData.theme,
+        style: validatedData.style,
+      },
+    }
     
     // Save to database
     const { data: presentation, error: dbError } = await supabase
@@ -93,8 +101,8 @@ export async function POST(request: NextRequest) {
     // Save to prompts history
     await supabase.from('prompts_history').insert({
       user_id: user.id,
-      input_text: JSON.stringify(validatedData.slides),
-      ai_response: aiResponse,
+      input_text: combinedPrompt,
+      ai_response: { slides: assembledSlides },
     })
     
     return NextResponse.json({

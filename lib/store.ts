@@ -3,6 +3,40 @@
 import { create } from 'zustand'
 import { Presentation, Slide, SlideElement, SlidesJSON } from '@/lib/types'
 
+// Debounce timeout for auto-saving
+let saveTimeout: NodeJS.Timeout | null = null
+
+// Auto-save function with debouncing
+async function savePresentation(presentation: Presentation) {
+  // Clear previous timeout
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+  }
+  
+  // Debounce: wait 1 second before saving
+  saveTimeout = setTimeout(async () => {
+    try {
+      const response = await fetch('/api/presentations', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: presentation.id,
+          slides_json: presentation.slides_json,
+        }),
+      })
+      
+      if (response.ok) {
+        console.log('✅ Presentation saved')
+        useEditorStore.getState().setLastSaved(new Date())
+      } else {
+        console.error('❌ Failed to save presentation')
+      }
+    } catch (error) {
+      console.error('❌ Save error:', error)
+    }
+  }, 1000) // 1 second debounce
+}
+
 interface EditorState {
   // Current presentation
   presentation: Presentation | null
@@ -78,13 +112,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!presentation) return
     
     const slides = [...presentation.slides_json.slides, slide]
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
       currentSlideIndex: slides.length - 1,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   updateSlide: (index, slide) => {
@@ -94,12 +133,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const slides = [...presentation.slides_json.slides]
     slides[index] = slide
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   deleteSlide: (index) => {
@@ -109,13 +153,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const slides = presentation.slides_json.slides.filter((_, i) => i !== index)
     const newIndex = currentSlideIndex >= slides.length ? slides.length - 1 : currentSlideIndex
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
       currentSlideIndex: newIndex,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   duplicateSlide: (index) => {
@@ -138,13 +187,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       ...presentation.slides_json.slides.slice(index + 1),
     ]
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
       currentSlideIndex: index + 1,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   reorderSlides: (fromIndex, toIndex) => {
@@ -155,13 +209,18 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const [removed] = slides.splice(fromIndex, 1)
     slides.splice(toIndex, 0, removed)
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
       currentSlideIndex: toIndex,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   // Element operations
@@ -178,12 +237,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     
     slides[slideIndex] = { ...slide, elements }
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
   
   deleteElement: (slideIndex, elementId) => {
@@ -196,12 +260,17 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const elements = slide.elements.filter((el) => el.id !== elementId)
     slides[slideIndex] = { ...slide, elements }
     
+    const updatedPresentation = {
+      ...presentation,
+      slides_json: { slides },
+    }
+    
     set({
-      presentation: {
-        ...presentation,
-        slides_json: { slides },
-      },
+      presentation: updatedPresentation,
       selectedElementId: null,
     })
+    
+    // Auto-save to database
+    savePresentation(updatedPresentation)
   },
 }))

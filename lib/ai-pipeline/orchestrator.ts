@@ -51,7 +51,7 @@ Rules:
     ? `Use this text word-for-word, split into ${input.num_slides} slides:\n\n${input.prompt}`
     : `Transform this into ${input.num_slides} professional slides:\n\n${input.prompt}\n\nTone: ${input.tone}\nStyle: ${input.style}`
 
-  const response = await callOpenRouterFree({
+  const response = await callGeminiAPI({
     systemPrompt,
     userPrompt,
   })
@@ -142,7 +142,7 @@ Keywords: ${segment.keywords.join(', ')}
 
 Plan layout positions.`
 
-  const response = await callOpenRouterFree({
+  const response = await callGeminiAPI({
     systemPrompt,
     userPrompt,
   })
@@ -302,7 +302,7 @@ Background: ${slide.background.gradient.type} gradient
 Elements: ${slide.shapes.length} shapes, ${slide.icons.length} icons
 Has image: ${slide.image ? 'yes' : 'no'}`
 
-  const response = await callOpenRouterFree({
+  const response = await callGeminiAPI({
     systemPrompt,
     userPrompt,
   })
@@ -565,7 +565,7 @@ function extractJSON(input: string, context: string = 'unknown'): any {
   }
 }
 
-async function callOpenRouterFree({
+async function callGeminiAPI({
   systemPrompt,
   userPrompt,
 }: {
@@ -575,44 +575,57 @@ async function callOpenRouterFree({
   // Wait for rate limit before making request
   await waitForRateLimit()
   
-  console.log('[OpenRouter] 📤 Making API call...')
-  const apiKey = process.env.OPENROUTER_API_KEY
+  console.log('[Gemini API] 📤 Making API call...')
+  const apiKey = process.env.GEMINI_API_KEY
   
   if (!apiKey) {
-    console.error('[OpenRouter] ❌ API key not configured')
-    throw new Error('OPENROUTER_API_KEY not configured')
+    console.error('[Gemini API] ❌ API key not configured')
+    throw new Error('GEMINI_API_KEY not configured in environment variables')
   }
   
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const requestBody = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: systemPrompt + '\n\n' + userPrompt }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2000,
+      responseMimeType: 'application/json',
+    }
+  }
+  
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`
+  
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      model: 'qwen/qwen3-235b-a22b:free',
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    }),
+    body: JSON.stringify(requestBody),
   })
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('[OpenRouter] ❌ API error:', response.status, errorText)
-    throw new Error(`OpenRouter API error: ${response.status}`)
+    console.error('[Gemini API] ❌ API error:', response.status, errorText)
+    throw new Error(`Gemini API error: ${response.status}`)
   }
   
-  console.log('[OpenRouter] ✅ API call successful')
+  console.log('[Gemini API] ✅ API call successful')
   
   const data = await response.json()
-  const content = data.choices[0].message.content
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   
-  console.log('[OpenRouter] Response received, length:', content.length, 'chars')
+  if (!content) {
+    console.error('[Gemini API] ❌ No content in response:', JSON.stringify(data))
+    throw new Error('No content in Gemini API response')
+  }
+  
+  console.log('[Gemini API] Response received, length:', content.length, 'chars')
   
   // Extract the context from system prompt for better logging
   const context = systemPrompt.includes('presentation designer') || systemPrompt.includes('Split the user')

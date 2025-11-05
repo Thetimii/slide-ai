@@ -7,16 +7,35 @@ interface TopbarProps {
 }
 
 export default function Topbar({ onGenerateClick }: TopbarProps) {
-  const { presentation, toggleRightPanel, isRightPanelOpen, toggleDarkMode, isDarkMode } = useEditorStore()
+  const { presentation, toggleRightPanel, isRightPanelOpen, toggleDarkMode, isDarkMode, lastSaved } = useEditorStore()
+  
+  // Format last saved time
+  const formatLastSaved = (date: Date | null) => {
+    if (!date) return 'Not saved'
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+    if (seconds < 10) return 'Saved just now'
+    if (seconds < 60) return `Saved ${seconds}s ago`
+    const minutes = Math.floor(seconds / 60)
+    if (minutes < 60) return `Saved ${minutes}m ago`
+    return 'Saved'
+  }
   
   return (
     <div className="h-16 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-surface-1 flex items-center justify-between px-6">
       <div className="flex items-center gap-4">
         <h1 className="font-heading text-xl font-bold text-gray-900 dark:text-white">Slide Builder</h1>
         {presentation && (
-          <span className="text-gray-600 dark:text-muted text-sm">
-            {presentation.title || 'Untitled Presentation'}
-          </span>
+          <>
+            <span className="text-gray-600 dark:text-muted text-sm">
+              {presentation.title || 'Untitled Presentation'}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {formatLastSaved(lastSaved)}
+            </span>
+          </>
         )}
       </div>
       

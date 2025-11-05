@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { generateSlidesWithProgress, type ProgressUpdate } from '@/lib/ai-pipeline/streaming-orchestrator'
+import { generateSlidesWithProgress, convertToEditorFormat, type ProgressUpdate } from '@/lib/ai-pipeline/streaming-orchestrator'
 import { z } from 'zod'
 
 const SlideInputSchema = z.object({
@@ -74,9 +74,12 @@ export async function POST(request: NextRequest) {
           }
         )
         
+        // Transform AssembledSlides to editor format using the converter
+        const editorSlides = assembledSlides.map((assembled) => convertToEditorFormat(assembled))
+        
         // Transform to database format
         const slidesJSON = {
-          slides: assembledSlides,
+          slides: editorSlides,
           meta: {
             uniformDesign: validatedData.useUniformDesign,
             theme: validatedData.theme,

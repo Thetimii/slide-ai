@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false)
   const { presentation, setPresentation } = useEditorStore()
   const isRightPanelOpen = useEditorStore(state => state.isRightPanelOpen)
+  const toggleRightPanel = useEditorStore(state => state.toggleRightPanel)
   const supabase = createClient()
   
   useEffect(() => {
@@ -95,9 +96,22 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Canvas Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col relative">
           <Topbar onGenerateClick={() => setShowGenerateModal(true)} />
           <EditorCanvas />
+          
+          {/* Floating button to reopen right panel */}
+          {!isRightPanelOpen && (
+            <button
+              onClick={toggleRightPanel}
+              className="absolute right-4 bottom-4 bg-primary hover:bg-primary/90 text-white rounded-full p-3 shadow-lg transition-all duration-200 hover:scale-110"
+              title="Open Inspector Panel"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Right Inspector Panel */}

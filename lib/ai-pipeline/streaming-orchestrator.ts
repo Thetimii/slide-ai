@@ -182,36 +182,61 @@ export async function generateSlidesWithProgress(
 // ============= Helper Functions (from orchestrator) =============
 
 async function segmentText(input: UserInput): Promise<SlideSegment[]> {
-  const systemPrompt = `You are a presentation designer. Split the user's content into ${input.num_slides} logical slides with clear structure.
+  const systemPrompt = `You are a professional church presentation designer following 2025 trends.
 
-CRITICAL: Return ONLY valid JSON with properly escaped quotes. Do not include any markdown formatting or code fences.
+2025 CHURCH CONTENT PRINCIPLES:
+- Authentic, conversational tone (not overly formal)
+- Short, punchy headlines (3-7 words MAX)
+- Subtitles add context, not repetition
+- Body text: One key idea per slide (15-30 words)
+- Visual hierarchy: Headline > Subtitle > Body
+- Each slide tells ONE story, makes ONE point
+- Vary the approach: some slides text-heavy, others image-focused
+- Use active voice, present tense
+- Relatable language, avoid churchy jargon
 
-Expected format:
+CONTENT VARIETY:
+- Slide 1: Bold statement or question
+- Slide 2: Scripture or quote (short)
+- Slide 3: Practical application
+- Slide 4: Call to action or reflection
+- Mix up the rhythm, avoid repetition
+
+CRITICAL RULES:
+1. Return ONLY valid JSON
+2. Start response with { and end with }
+3. No markdown, no code fences, no commentary
+4. Make each slide UNIQUE and INTERESTING
+5. Escape quotes in text with backslash
+
+REQUIRED OUTPUT FORMAT:
 {
   "slides": [
     {
       "slide_index": 1,
-      "title": "Main Title",
-      "subtitle": "Optional subtitle",
-      "body_text": "Key points or description",
-      "keywords": ["keyword1", "keyword2", "keyword3"]
+      "title": "Bold Short Headline",
+      "subtitle": "Supporting context in 5-8 words",
+      "body_text": "One clear idea. 15-30 words max. Make it punchy.",
+      "keywords": ["relevant", "search", "terms"]
     }
   ]
 }
 
-Rules:
-- Extract 2-4 keywords per slide for visual search
-- Keep titles short (3-7 words)
-- Body text should be concise (15-40 words)
-- Escape any quotes in text with backslash: \\"
-- Do not use line breaks within strings`
+FIELD REQUIREMENTS:
+- slide_index: number (1, 2, 3, etc.)
+- title: string (3-7 words, compelling and varied)
+- subtitle: string (5-8 words or empty "", adds context)
+- body_text: string (15-30 words, ONE key point)
+- keywords: array of 3-4 specific strings (for finding relevant images)
+
+Generate EXACTLY ${input.num_slides} slides. Make each one DIFFERENT.`
 
   const userPrompt = input.use_word_for_word
     ? `Use this text word-for-word, split into ${input.num_slides} slides:\n\n${input.prompt}`
-    : `Transform this into ${input.num_slides} professional slides:\n\n${input.prompt}\n\nTone: ${input.tone}\nStyle: ${input.style}`
+    : `Transform this into ${input.num_slides} modern, engaging church slides:\n\n${input.prompt}\n\nTone: ${input.tone}\nStyle: ${input.style}\n\nMake each slide unique and visually interesting.`
 
   try {
-    const response = await callOpenRouterFree({ systemPrompt, userPrompt })
+    const response = await callGeminiAPI({ systemPrompt, userPrompt })
 
     if (!response || !Array.isArray(response.slides)) {
       console.warn('[Segmentation] ⚠️  AI returned invalid format, using fallback')
@@ -254,41 +279,83 @@ function getDefaultSegments(input: UserInput): SlideSegment[] {
 }
 
 async function planLayout(segment: SlideSegment, style: string): Promise<LayoutPlan> {
-  const systemPrompt = `You are a JSON-only API. Return ONLY valid JSON with NO commentary, explanations, or markdown.
+  const systemPrompt = `You are an expert 2025 church slide designer. Create modern, trendy layouts that follow current design principles.
 
-Task: Plan element positions for a 1600x900px slide.
+2025 CHURCH SLIDE DESIGN TRENDS:
+- Minimalist with generous whitespace (breathing room is key)
+- Bold, oversized typography (headlines 80-120px)
+- Subtle texture overlays (grain, paper texture at 5-10% opacity)
+- Organic shapes (blobs) as decorative accents in CORNERS or EDGES ONLY
+- High-quality imagery with duotone or gradient overlays
+- Asymmetric layouts with intentional imbalance
+- Grid-based alignment (use 100px or 200px increments)
+- Content-first: text must be readable, images support the message
+- Modern serif fonts for scripture, sans-serif for contemporary messages
+- Negative space is intentional design, not empty space
 
-REQUIRED OUTPUT FORMAT (copy this structure exactly):
+CRITICAL LAYOUT RULES - NEVER VIOLATE:
+1. Images MUST NEVER overlap text elements
+2. Text MUST be in clear, readable areas (solid background or gradient overlay)
+3. Blobs go in CORNERS or behind images, NEVER over text
+4. Create clear visual hierarchy: headline → image → body text
+5. Each element needs breathing room (50px minimum spacing)
+6. Split screen: 50/50 left-right OR top-bottom
+7. If image is background, darken it with overlay (add note in composition)
+
+LAYOUT VARIETY (rotate through these):
+1. **Split Screen Left**: Text left (0-750), Image right (800-1600), blobs in corners
+2. **Split Screen Right**: Image left (0-800), Text right (850-1600), blobs in corners
+3. **Hero Image Background**: Full image (0-1600), text with dark overlay center, blob bottom-right
+4. **Floating Card**: Image background (0-1600), white card (200,150,1200x600) with text, blob top-left
+5. **Minimal Corner**: Large text top-left (80,100,800x400), small image bottom-right (1000,500,500x350), blob middle-left
+6. **Text Focus**: Center text (300,250,1000x400), tiny image accent (100,600,400x250), blob top-right
+7. **Magazine Grid**: Text top (100,80,1400x300), Image bottom (100,400,1400x420), no blobs
+
+POSITIONING REQUIREMENTS (1600x900 canvas):
+- Safe text zones: (80-750, 80-820) OR (850-1520, 80-820)
+- Image zones: Can use full height (0-900) but must not overlap text
+- Blobs: Only in corners: (0-300, 0-300), (1300-1600, 0-300), (0-300, 600-900), (1300-1600, 600-900)
+- Headlines: 100-150px from top
+- Body text: Below headline with 50px+ gap
+- Grid alignment: All x/y positions MUST be multiples of 50 or 100
+
+CRITICAL RULES - ENFORCE STRICTLY:
+1. Return ONLY valid JSON
+2. Start with { and end with }
+3. No markdown, no code fences
+4. Each slide MUST look DIFFERENT from previous
+5. NEVER place blobs over text (only in corners/edges)
+6. NEVER place images over text (use split screen or background)
+7. Include at least 1 blob per slide (for visual interest)
+
+REQUIRED OUTPUT FORMAT:
 {
-  "composition": "rule_of_thirds",
+  "composition": "split_screen_left",
   "elements": [
-    {"type": "headline", "x": 100, "y": 200, "width": 1400, "align": "left"},
-    {"type": "body", "x": 100, "y": 350, "width": 700},
-    {"type": "image_placeholder", "x": 900, "y": 200, "width": 600, "height": 500},
-    {"type": "blob", "x": 50, "y": 600, "width": 400, "height": 300},
-    {"type": "icon_placeholder", "x": 1400, "y": 750}
+    {"type": "headline", "x": 100, "y": 150, "width": 600, "align": "left"},
+    {"type": "body", "x": 100, "y": 320, "width": 550},
+    {"type": "image_placeholder", "x": 850, "y": 0, "width": 750, "height": 900},
+    {"type": "blob", "x": 1300, "y": 600, "width": 300, "height": 300}
   ]
 }
 
-Valid composition values: "rule_of_thirds", "centered", "asymmetric"
-Valid element types: "headline", "body", "image_placeholder", "blob", "icon_placeholder"
+Style preference: ${style}`
 
-IMPORTANT: 
-- Start your response with { and end with }
-- No text before or after the JSON
-- No explanations or commentary
-- Use double quotes for all strings
-- Style preference: ${style}`
-
-  const userPrompt = `Slide ${segment.slide_index}:
-Title: ${segment.title}
-Subtitle: ${segment.subtitle}
-Body: ${segment.body_text}
+  const userPrompt = `Design slide ${segment.slide_index}:
+Title: "${segment.title}"
+Subtitle: "${segment.subtitle}"
+Body: "${segment.body_text}"
 Keywords: ${segment.keywords.join(', ')}
 
-Plan layout positions.`
+REQUIREMENTS:
+- Create a UNIQUE layout (different from slide ${segment.slide_index - 1})
+- Images MUST NOT overlap text
+- Blobs MUST be in corners/edges only
+- Use 2025 church design trends
+- Grid-based positioning (multiples of 50/100)
+- Include grain/texture overlay instructions`
 
-  const response = await callOpenRouterFree({ systemPrompt, userPrompt })
+  const response = await callGeminiAPI({ systemPrompt, userPrompt })
 
   if (!response || !Array.isArray(response.elements)) {
     return getDefaultLayout(segment)
@@ -437,6 +504,155 @@ function assembleSlide(
   }
 }
 
+// ============= FORMAT CONVERTER =============
+/**
+ * Converts AssembledSlide format (AI output) to Slide format (editor expects).
+ * Transforms {shapes, icons, image, text, background} -> {elements[], background}
+ */
+import type { Slide, SlideElement } from '../types'
+
+export function convertToEditorFormat(assembled: AssembledSlide): Slide {
+  const elements: SlideElement[] = []
+  let elementCounter = 0
+  
+  // Convert background (gradient + texture) to editor background format
+  const background = {
+    type: 'gradient' as const,
+    gradient: {
+      angle: assembled.background.gradient.angle,
+      colors: [assembled.background.gradient.from, assembled.background.gradient.to],
+    },
+  }
+  
+  // Convert text elements (headline, subtext, body)
+  if (assembled.text.headline) {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'text',
+      props: {
+        x: 100,
+        y: 150,
+        width: 1400,
+        height: 120,
+      },
+      style: {
+        fontFamily: assembled.text.font || 'DM Sans',
+        fontSize: 72,
+        fontWeight: 700,
+        fill: assembled.text.color || '#111111',
+        align: 'left',
+      },
+      content: assembled.text.headline,
+    })
+  }
+  
+  if (assembled.text.subtext) {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'text',
+      props: {
+        x: 100,
+        y: 290,
+        width: 1400,
+        height: 60,
+      },
+      style: {
+        fontFamily: assembled.text.font || 'DM Sans',
+        fontSize: 36,
+        fontWeight: 500,
+        fill: assembled.text.color || '#111111',
+        align: 'left',
+      },
+      content: assembled.text.subtext,
+    })
+  }
+  
+  if (assembled.text.body) {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'text',
+      props: {
+        x: 100,
+        y: 380,
+        width: 700,
+        height: 400,
+      },
+      style: {
+        fontFamily: assembled.text.font || 'DM Sans',
+        fontSize: 24,
+        fontWeight: 400,
+        fill: assembled.text.color || '#111111',
+        align: 'left',
+        lineHeight: 1.6,
+      },
+      content: assembled.text.body,
+    })
+  }
+  
+  // Convert image if present
+  if (assembled.image) {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'image',
+      props: {
+        x: assembled.image.x || 900,
+        y: assembled.image.y || 200,
+        width: assembled.image.width || 600,
+        height: assembled.image.height || 500,
+      },
+      content: assembled.image.url,
+    })
+  }
+  
+  // Convert blobs/shapes (rendered as SVG shapes)
+  assembled.shapes.forEach((shape) => {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'shape',
+      props: {
+        x: shape.x,
+        y: shape.y,
+        width: shape.width,
+        height: shape.height,
+        opacity: 0.3,
+      },
+      style: {
+        fill: shape.color,
+      },
+      content: shape.svg, // Store SVG data
+    })
+  })
+  
+  // Convert icons (note: icons will need special handling in renderer)
+  assembled.icons.forEach((icon) => {
+    elements.push({
+      id: `element-${elementCounter++}`,
+      type: 'shape', // Using 'shape' type, will render as icon
+      props: {
+        x: icon.position.x,
+        y: icon.position.y,
+        width: icon.size,
+        height: icon.size,
+      },
+      style: {
+        fill: icon.color,
+      },
+      content: `icon:${icon.name}:${icon.variant}`, // Special format for icons
+    })
+  })
+  
+  return {
+    id: `slide-${assembled.meta.slide_index}`,
+    background,
+    elements,
+    meta: {
+      title: assembled.meta.composition || 'Untitled',
+      notes: `Keywords: ${assembled.meta.keywords.join(', ')}`,
+      theme: 'ai-generated',
+    },
+  }
+}
+
 // ============= SAFE JSON PARSER =============
 /**
  * Safely extract and parse JSON from AI responses.
@@ -515,9 +731,9 @@ function extractJSON(input: string, context: string = 'unknown'): any {
   }
 }
 
-// Rate limiter: 20 requests per minute = 3 seconds between requests
+// Rate limiter: Gemini free tier has rate limits
 let lastRequestTime = 0
-const MIN_REQUEST_INTERVAL = 3000 // 3 seconds
+const MIN_REQUEST_INTERVAL = 2000 // 2 seconds between requests
 
 async function waitForRateLimit() {
   const now = Date.now()
@@ -532,7 +748,7 @@ async function waitForRateLimit() {
   lastRequestTime = Date.now()
 }
 
-async function callOpenRouterFree({
+async function callGeminiAPI({
   systemPrompt,
   userPrompt,
 }: {
@@ -542,38 +758,44 @@ async function callOpenRouterFree({
   // Wait for rate limit before making request
   await waitForRateLimit()
   
-  console.log('[OpenRouter] 📤 Making API call...')
-  console.log('[OpenRouter] User prompt length:', userPrompt.length, 'chars')
+  console.log('[Gemini API] 📤 Making API call...')
+  console.log('[Gemini API] User prompt length:', userPrompt.length, 'chars')
   
-  const apiKey = process.env.OPENROUTER_API_KEY
+  const apiKey = process.env.GEMINI_API_KEY
   
   if (!apiKey) {
-    console.error('[OpenRouter] ❌ API key not configured')
-    throw new Error('OPENROUTER_API_KEY not configured')
+    console.error('[Gemini API] ❌ API key not configured')
+    throw new Error('GEMINI_API_KEY not configured in environment variables')
   }
   
   const requestBody = {
-    model: 'qwen/qwen3-235b-a22b:free',
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt },
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: systemPrompt + '\n\n' + userPrompt }
+        ]
+      }
     ],
-    temperature: 0.7,
-    max_tokens: 2000,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2000,
+      responseMimeType: 'application/json',
+    }
   }
   
-  console.log('[OpenRouter] Request config:', {
-    model: requestBody.model,
-    responseFormat: requestBody.response_format,
-    messageCount: requestBody.messages.length,
-    maxTokens: requestBody.max_tokens,
+  console.log('[Gemini API] Request config:', {
+    model: 'gemini-2.5-flash-lite',
+    temperature: 0.7,
+    maxOutputTokens: 2000,
+    responseMimeType: 'application/json',
   })
   
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`
+  
+  const response = await fetch(url, {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify(requestBody),
@@ -581,16 +803,21 @@ async function callOpenRouterFree({
   
   if (!response.ok) {
     const errorText = await response.text()
-    console.error('[OpenRouter] ❌ API error:', response.status, errorText)
-    throw new Error(`OpenRouter API error: ${response.status}`)
+    console.error('[Gemini API] ❌ API error:', response.status, errorText)
+    throw new Error(`Gemini API error: ${response.status}`)
   }
   
-  console.log('[OpenRouter] ✅ API call successful')
+  console.log('[Gemini API] ✅ API call successful')
   
   const data = await response.json()
-  const content = data.choices[0].message.content
+  const content = data.candidates?.[0]?.content?.parts?.[0]?.text
   
-  console.log('[OpenRouter] Response received, length:', content.length, 'chars')
+  if (!content) {
+    console.error('[Gemini API] ❌ No content in response:', JSON.stringify(data))
+    throw new Error('No content in Gemini API response')
+  }
+  
+  console.log('[Gemini API] Response received, length:', content.length, 'chars')
   
   // Extract the context from system prompt for better logging
   const context = systemPrompt.includes('presentation designer') || systemPrompt.includes('Split the user')

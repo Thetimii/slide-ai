@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Presentation } from '@/lib/types'
+import { useStreamingSlides } from '@/hooks/useStreamingSlides'
 
 interface GenerateSlidesModalProps {
   onClose: () => void
@@ -14,9 +15,8 @@ interface SlideInput {
 }
 
 export default function GenerateSlidesModal({ onClose, onSuccess }: GenerateSlidesModalProps) {
-  const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<'config' | 'content'>('config')
+  const [step, setStep] = useState<'config' | 'content' | 'generating'>('config')
   const [numSlides, setNumSlides] = useState(3)
   const [useUniformDesign, setUseUniformDesign] = useState(false)
   const [useVerbatim, setUseVerbatim] = useState(false)
@@ -30,6 +30,8 @@ export default function GenerateSlidesModal({ onClose, onSuccess }: GenerateSlid
     theme: 'Modern Cinematic',
     style: 'cinematic gradients, professional typography, elegant spacing',
   })
+
+  const { isGenerating, progress, error: streamError, generateSlides, cancel } = useStreamingSlides()
 
   const updateNumSlides = (num: number) => {
     setNumSlides(num)
@@ -46,40 +48,121 @@ export default function GenerateSlidesModal({ onClose, onSuccess }: GenerateSlid
     )
   }
   
+  // Watch for completion
+  useEffect(() => {
+    if (progress?.type === 'complete' && progress.presentation) {
+      onSuccess(progress.presentation)
+    }
+  }, [progress, onSuccess])
+  
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setIsLoading(true)
     setError(null)
+    setStep('generating')
     
     try {
-      const response = await fetch('/api/generate-slides', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          presentationTitle: formData.presentationTitle,
-          theme: formData.theme,
-          style: formData.style,
-          numSlides,
-          slides: slideInputs,
-          useUniformDesign,
-          useVerbatim,
-        }),
+      await generateSlides({
+        presentationTitle: formData.presentationTitle,
+        theme: formData.theme,
+        style: formData.style,
+        numSlides,
+        slides: slideInputs,
+        useUniformDesign,
+        useVerbatim,
       })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to generate slides')
-      }
-      
-      const { presentation } = await response.json()
-      onSuccess(presentation)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setIsLoading(false)
     }
+  }
+  
+  // Generating progress view
+  if (step === 'generating') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+        <div className="card w-full max-w-3xl max-h-[90vh] overflow-y-auto p-8 m-4 bg-white dark:bg-surface-1">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="font-heading text-2xl font-bold text-gray-900 dark:text-white">
+              Generating Slides...
+            </h2>
+            <button 
+              onClick={cancel}
+              className="text-gray-500 dark:text-muted hover:text-gray-700 dark:hover:text-fg transition-colors"
+            >
+              ✕
+            </button>
+          </div>
+
+          {(error || streamError) && (
+            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-sm">
+              {error || streamError}
+            </div>
+          )}
+
+          {/* Progress bar */}
+          {progress && (
+            <div className="space-y-6">
+              {/* Overall progress */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Overall Progress
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {progress.percentage?.toFixed(0) || 0}%
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-surface-2 rounded-full h-3">
+                  <div 
+                    className="bg-primary h-3 rounded-full transition-all duration-300"
+                    style={{ width: `${progress.percentage || 0}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Current status */}
+              <div className="p-4 bg-gray-50 dark:bg-surface-2 rounded-xl">
+                <p className="text-base font-medium text-gray-900 dark:text-white">
+                  {progress.message}
+                </p>
+                {progress.slideIndex && progress.totalSlides && (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Slide {progress.slideIndex} of {progress.totalSlides}
+                  </p>
+                )}
+              </div>
+
+              {/* Slide preview (if available) */}
+              {progress.slidePreview && (
+                <div className="p-4 bg-white dark:bg-surface-3 rounded-xl border border-gray-200 dark:border-white/10">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    Preview: {progress.slidePreview.text?.headline}
+                  </p>
+                  <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
+                    <p>Composition: {progress.slidePreview.meta?.composition}</p>
+                    <p>Elements: {progress.slidePreview.shapes?.length || 0} shapes, {progress.slidePreview.icons?.length || 0} icons</p>
+                    {progress.slidePreview.image && (
+                      <p>Image: ✓ by {progress.slidePreview.image.photographer}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Cancel button */}
+              <div className="flex justify-center pt-4">
+                <button
+                  type="button"
+                  onClick={cancel}
+                  disabled={!isGenerating}
+                  className="px-6 py-2 bg-gray-200 dark:bg-surface-2 text-gray-700 dark:text-fg rounded-xl hover:bg-gray-300 dark:hover:bg-surface-3 transition-colors disabled:opacity-50"
+                >
+                  Cancel Generation
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
   }
   
   if (step === 'config') {
@@ -254,10 +337,10 @@ export default function GenerateSlidesModal({ onClose, onSuccess }: GenerateSlid
             </button>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isGenerating}
               className="flex-1 px-6 py-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? (
+              {isGenerating ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
                   Generating...

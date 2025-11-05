@@ -21,7 +21,16 @@ export default function SlidesList() {
     )
   }
   
-  const slides = presentation.slides_json.slides
+  // Safe access to slides with fallback
+  const slides = presentation.slides_json?.slides || []
+  
+  if (slides.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500 dark:text-muted text-sm">
+        No slides yet
+      </div>
+    )
+  }
   
   function handleAddSlide() {
     // Create a blank slide with default theme

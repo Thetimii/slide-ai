@@ -13,9 +13,11 @@ export default function RightInspector() {
     toggleRightPanel,
   } = useEditorStore()
   
-  if (!presentation) return null
+  if (!presentation || !presentation.slides_json?.slides) return null
   
   const currentSlide = presentation.slides_json.slides[currentSlideIndex]
+  if (!currentSlide) return null
+  
   const selectedElement = currentSlide?.elements.find(el => el.id === selectedElementId)
   
   return (

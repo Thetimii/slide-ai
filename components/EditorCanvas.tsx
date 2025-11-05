@@ -37,7 +37,8 @@ export default function EditorCanvas() {
   
   const { Stage, Layer, Rect, Text, Group } = Konva
   
-  if (!presentation || !presentation.slides_json.slides[currentSlideIndex]) {
+  // Safe access with fallback
+  if (!presentation || !presentation.slides_json?.slides || !presentation.slides_json.slides[currentSlideIndex]) {
     return null
   }
   
